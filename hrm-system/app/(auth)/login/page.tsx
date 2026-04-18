@@ -47,18 +47,13 @@ export default function LoginPage() {
       <div className="flex flex-col min-h-screen">
         {/* Top brand line */}
         <header className="px-8 pt-7 pb-4">
-          <a href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-sm flex items-center justify-center bg-ink-primary text-white">
-              <span className="text-[10px] font-semibold tracking-[0.02em]">TAG</span>
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[13px] font-medium text-ink-primary tracking-[-0.005em]">
-                TAG Solutions
-              </span>
-              <span className="text-[10px] text-ink-tertiary font-mono tracking-wide uppercase">
-                HRM
-              </span>
-            </div>
+          <a href="/" className="inline-flex items-center group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://www.tagsolutionsltd.com/assets/tags-logo-B9bZe0v8.png"
+              alt="TAG Solutions"
+              className="h-8 w-auto"
+            />
           </a>
         </header>
 
@@ -183,27 +178,6 @@ export default function LoginPage() {
               Track attendance across the team, approve leave without the back-and-forth, and
               hand off clean payroll every month.
             </p>
-
-            {/* Stat plate */}
-            <div className="mt-10 grid grid-cols-3 gap-0 border border-white/10 rounded-md overflow-hidden bg-white/[0.02]">
-              {[
-                { label: "Modules", value: "07" },
-                { label: "Roles", value: "03" },
-                { label: "Exports", value: "PDF·XLSX" },
-              ].map((stat, idx) => (
-                <div
-                  key={stat.label}
-                  className={idx !== 2 ? "border-r border-white/10 p-4" : "p-4"}
-                >
-                  <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-white/40 block mb-2">
-                    {stat.label}
-                  </span>
-                  <span className="font-mono tabular-nums text-[18px] text-white">
-                    {stat.value}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Bottom meta rail */}
