@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { requirePagePermission } from "@/lib/permissions";
 import { Clock, Calendar as CalendarIcon, PencilLine, CircleDashed } from "lucide-react";
 import EmployeeExportButtons from "@/components/attendance/EmployeeExportButtons";
 import {
@@ -33,18 +34,9 @@ export default async function EmployeeAttendanceDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ start?: string; end?: string }>;
 }) {
+  const ctx = await requirePagePermission("attendance.reports");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;

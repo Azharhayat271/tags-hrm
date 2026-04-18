@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AddLifecycleEventForm from "@/components/lifecycle/AddLifecycleEventForm";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,22 +13,9 @@ interface PageProps {
 
 export default async function AddLifecycleEventPage({ params }: PageProps) {
   const { id } = await params;
+  const ctx = await requirePagePermission("employees.manage");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Check if user is admin or super_admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   // Get employee details
   const { data: employee, error } = await supabase
@@ -65,7 +53,7 @@ export default async function AddLifecycleEventPage({ params }: PageProps) {
       <div className="max-w-2xl">
         <AddLifecycleEventForm 
           employeeId={id}
-          adminId={user?.id || ''}
+          adminId={ctx.userId}
         />
       </div>
     </div>

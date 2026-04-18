@@ -1,15 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
-import { Plus } from "lucide-react";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { Plus, Users, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import LeaveBalance from "@/components/leave/LeaveBalance";
 import LeaveHistory from "@/components/leave/LeaveHistory";
 import PublicHolidaysCard from "@/components/leave/PublicHolidaysCard";
+import { getBalances } from "@/lib/leave/balance";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeavePage() {
   const supabase = await createClient();
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,13 +36,7 @@ export default async function LeavePage() {
     );
   }
 
-  // Get leave types
-  const { data: leaveTypes } = await supabase
-    .from("leave_types")
-    .select("*")
-    .order("name");
-
-  // Get employee's leave requests
+  // Get employee's leave requests (for history)
   const { data: leaveRequests } = await supabase
     .from("leave_requests")
     .select(`
@@ -59,23 +55,34 @@ export default async function LeavePage() {
     .order("date")
     .limit(5);
 
-  // Calculate leave balances
-  const currentYear = new Date().getFullYear();
-  const leaveBalances = leaveTypes?.map(type => {
-    const usedDays = leaveRequests
-      ?.filter(req => 
-        req.leave_type_id === type.id && 
-        req.status === 'approved' &&
-        new Date(req.start_date).getFullYear() === currentYear
-      )
-      .reduce((sum, req) => sum + req.days, 0) || 0;
+  // Balances via shared helper (uses admin client so pending totals are consistent with the API)
+  const admin = await createAdminClient();
+  const balances = await getBalances(admin as any, (employee as { id: string }).id);
+  const leaveBalances = balances.map((b) => ({
+    id: b.leaveTypeId,
+    name: b.leaveTypeName,
+    days_per_year: b.allocated,
+    used: b.used,
+    remaining: b.unlimited ? -1 : b.remaining, // -1 sentinel for unlimited; component handles it
+    unlimited: b.unlimited,
+    pending: b.pending,
+  }));
 
-    return {
-      ...type,
-      used: usedDays,
-      remaining: type.days_per_year - usedDays,
-    };
-  }) || [];
+  // Does the user manage anyone with pending leave? (for the banner)
+  const { data: directReports } = await admin
+    .from("employees")
+    .select("id")
+    .eq("reports_to", (employee as { id: string }).id);
+  const reportIds = (directReports || []).map((r: any) => r.id);
+  let teamPendingCount = 0;
+  if (reportIds.length > 0) {
+    const { count } = await admin
+      .from("leave_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending_manager")
+      .in("employee_id", reportIds);
+    teamPendingCount = count || 0;
+  }
 
   return (
     <div>
@@ -88,10 +95,23 @@ export default async function LeavePage() {
             Manage your leave requests and view balances
           </p>
         </div>
-        <Link href="/leave/apply" className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Apply for Leave
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/leave/calendar" className="btn-ghost flex items-center gap-2">
+            <CalendarDays className="w-4 h-4" />
+            Team calendar
+          </Link>
+          {teamPendingCount && teamPendingCount > 0 ? (
+            <Link href="/leave/approvals" className="btn-ghost flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Team approvals
+              <span className="badge-warning">{teamPendingCount}</span>
+            </Link>
+          ) : null}
+          <Link href="/leave/apply" className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Apply for Leave
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

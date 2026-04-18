@@ -25,9 +25,11 @@ async function handler(req: AuthenticatedRequest) {
       return sendErrorResponse(Errors.VALIDATION_ERROR("name is required"));
     }
 
-    if (typeof body.days_per_year !== "number" || body.days_per_year <= 0) {
+    if (typeof body.days_per_year !== "number" || body.days_per_year < 0) {
       return sendErrorResponse(
-        Errors.VALIDATION_ERROR("days_per_year must be a positive number")
+        Errors.VALIDATION_ERROR(
+          "days_per_year must be a non-negative number (use 0 for unpaid / unlimited)"
+        )
       );
     }
 

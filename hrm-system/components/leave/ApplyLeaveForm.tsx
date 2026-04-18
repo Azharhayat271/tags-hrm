@@ -22,13 +22,21 @@ interface LeaveType {
   days_per_year: number;
 }
 
+interface BalanceInfo {
+  remaining: number;
+  used: number;
+  pending: number;
+  unlimited: boolean;
+}
+
 interface ApplyLeaveFormProps {
   employeeId: string;
   leaveTypes: LeaveType[];
   holidayDates: string[];
+  balances?: Record<string, BalanceInfo>;
 }
 
-export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveFormProps) {
+export default function ApplyLeaveForm({ leaveTypes, holidayDates, balances = {} }: ApplyLeaveFormProps) {
   const router = useRouter();
   const { callApi } = useApiCall();
   const [loading, setLoading] = useState(false);
@@ -69,7 +77,6 @@ export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveF
           leave_type_id: formData.leave_type_id,
           start_date: formData.start_date,
           end_date: formData.end_date,
-          days: calculatedDays,
           reason: formData.reason || null,
         },
       });
@@ -102,6 +109,10 @@ export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveF
 
   const today = new Date().toISOString().split("T")[0];
   const selectedType = leaveTypes.find((t) => t.id === formData.leave_type_id);
+  const selectedBalance = selectedType ? balances[selectedType.id] : undefined;
+  const overQuota = Boolean(
+    selectedBalance && !selectedBalance.unlimited && calculatedDays > selectedBalance.remaining
+  );
 
   return (
     <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
@@ -138,9 +149,28 @@ export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveF
               )}
             </Field>
             {selectedType && (
-              <p className="text-[11px] text-ink-tertiary font-mono tabular-nums">
-                Annual allowance: <span className="text-ink-secondary">{selectedType.days_per_year} days</span>
-              </p>
+              <div className="text-[11px] text-ink-tertiary font-mono tabular-nums space-y-1">
+                <p>
+                  Annual allowance:{" "}
+                  <span className="text-ink-secondary">
+                    {selectedBalance?.unlimited
+                      ? "Unlimited (unpaid)"
+                      : `${selectedType.days_per_year} days`}
+                  </span>
+                </p>
+                {selectedBalance && !selectedBalance.unlimited && (
+                  <p>
+                    Available:{" "}
+                    <span className={overQuota ? "text-ink-danger" : "text-ink-secondary"}>
+                      {selectedBalance.remaining} day{selectedBalance.remaining === 1 ? "" : "s"}
+                    </span>{" "}
+                    <span className="text-ink-quaternary">
+                      ({selectedBalance.used} used
+                      {selectedBalance.pending > 0 ? `, ${selectedBalance.pending} pending` : ""})
+                    </span>
+                  </p>
+                )}
+              </div>
             )}
           </FormSection>
 
@@ -228,6 +258,16 @@ export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveF
           </FormSection>
         </div>
 
+        {overQuota && selectedBalance && (
+          <div className="px-6 pb-4">
+            <FormError>
+              Requested {calculatedDays} day{calculatedDays === 1 ? "" : "s"} exceeds your
+              available balance of {selectedBalance.remaining} day
+              {selectedBalance.remaining === 1 ? "" : "s"}.
+            </FormError>
+          </div>
+        )}
+
         <FormActions
           align="split"
           className="px-6 py-4 bg-surface-muted border-t-0 mt-0"
@@ -241,7 +281,7 @@ export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveF
             </Button>
             <Button
               type="submit"
-              disabled={calculatedDays <= 0}
+              disabled={calculatedDays <= 0 || overQuota}
               loading={loading}
             >
               {loading ? "Submitting…" : "Submit request"}

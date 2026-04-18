@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import EditEmployeeForm from "@/components/employees/EditEmployeeForm";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,22 +11,9 @@ interface PageProps {
 
 export default async function EditEmployeePage({ params }: PageProps) {
   const { id } = await params;
+  const ctx = await requirePagePermission("employees.manage");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Check if user is admin or super_admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   // Fetch employee details
   const { data: employee, error } = await supabase

@@ -18,18 +18,21 @@ import {
   Network,
 } from "lucide-react";
 import { cn } from "@/components/ui";
+import type { PermissionKey } from "@/lib/permissions";
 
 interface SidebarProps {
   profile: {
     full_name?: string | null;
     role?: string | null;
   } | null;
+  permissions?: PermissionKey[];
 }
 
 interface NavLink {
   href: string;
   label: string;
   icon: LucideIcon;
+  permission?: PermissionKey;
 }
 
 interface NavGroup {
@@ -37,11 +40,11 @@ interface NavGroup {
   links: NavLink[];
 }
 
-export default function Sidebar({ profile }: SidebarProps) {
+export default function Sidebar({ profile, permissions = [] }: SidebarProps) {
   const pathname = usePathname();
   const role = profile?.role || "employee";
 
-  const groups: NavGroup[] = buildGroups(role);
+  const groups: NavGroup[] = buildGroups(role, new Set(permissions));
 
   return (
     <aside
@@ -110,7 +113,10 @@ export default function Sidebar({ profile }: SidebarProps) {
   );
 }
 
-function buildGroups(role: string): NavGroup[] {
+function buildGroups(
+  role: string,
+  permissions: Set<PermissionKey>
+): NavGroup[] {
   const workspace: NavLink[] = [
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/profile", label: "My profile", icon: User },
@@ -121,12 +127,12 @@ function buildGroups(role: string): NavGroup[] {
   ];
 
   const operations: NavLink[] = [
-    { href: "/admin/employees", label: "Employees", icon: Users },
-    { href: "/admin/org-chart", label: "Organization chart", icon: Network },
-    { href: "/admin/attendance", label: "Attendance reports", icon: Clock },
-    { href: "/admin/leave-approvals", label: "Leave approvals", icon: CheckSquare },
-    { href: "/admin/payroll-upload", label: "Payroll upload", icon: FileText },
-    { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+    { href: "/admin/employees", label: "Employees", icon: Users, permission: "employees.view" },
+    { href: "/admin/org-chart", label: "Organization chart", icon: Network, permission: "employees.view" },
+    { href: "/admin/attendance", label: "Attendance reports", icon: Clock, permission: "attendance.reports" },
+    { href: "/admin/leave-approvals", label: "Leave approvals", icon: CheckSquare, permission: "leave.approve" },
+    { href: "/admin/payroll-upload", label: "Payroll upload", icon: FileText, permission: "payroll.upload" },
+    { href: "/admin/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
   ];
 
   const system: NavLink[] = [
@@ -153,6 +159,19 @@ function buildGroups(role: string): NavGroup[] {
     return [
       { label: "Workspace", links: [workspace[0]] },
       { label: "Operations", links: operations },
+      { label: "Personal", links: personalLinks },
+    ];
+  }
+
+  // Employee: show Operations entries only for permissions they have been granted.
+  const grantedOps = operations.filter(
+    (link) => link.permission && permissions.has(link.permission)
+  );
+
+  if (grantedOps.length > 0) {
+    return [
+      { label: "Workspace", links: [workspace[0]] },
+      { label: "Operations", links: grantedOps },
       { label: "Personal", links: personalLinks },
     ];
   }

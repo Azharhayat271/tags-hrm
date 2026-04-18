@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useApiCall } from "@/lib/hooks/client";
 import { formatDate } from "@/lib/utils";
 import { Check, X, Calendar, Loader2 } from "lucide-react";
+import { statusLabel } from "@/lib/leave/balance";
 
 interface LeaveRequest {
   id: string;
@@ -34,6 +35,12 @@ interface LeaveApprovalTableProps {
   requests: LeaveRequest[];
   adminId: string;
   isPending: boolean;
+}
+
+function badgeForStatus(status: string): string {
+  if (status === "approved") return "badge-success";
+  if (status === "rejected" || status === "cancelled") return "badge-danger";
+  return "badge-warning";
 }
 
 export default function LeaveApprovalTable({ requests, adminId, isPending }: LeaveApprovalTableProps) {
@@ -115,14 +122,8 @@ export default function LeaveApprovalTable({ requests, adminId, isPending }: Lea
                 <h4 className="text-base font-normal">
                   {request.employee?.profiles?.full_name}
                 </h4>
-                <span
-                  className={`badge ${
-                    request.status === 'approved' ? 'badge-success' :
-                    request.status === 'rejected' ? 'badge-danger' :
-                    'badge-warning'
-                  }`}
-                >
-                  {request.status.toUpperCase()}
+                <span className={`badge ${badgeForStatus(request.status)}`}>
+                  {statusLabel(request.status).toUpperCase()}
                 </span>
               </div>
               <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
@@ -237,14 +238,24 @@ export default function LeaveApprovalTable({ requests, adminId, isPending }: Lea
                 </button>
               </div>
             )
-          ) : (
+          ) : request.status === 'approved' ||
+            request.status === 'rejected' ||
+            request.status === 'cancelled' ? (
             <div className="pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
-                    {request.status === 'approved' ? 'Approved by' : 'Rejected by'}
+                    {request.status === 'approved'
+                      ? 'Approved by'
+                      : request.status === 'cancelled'
+                      ? 'Cancelled'
+                      : 'Rejected by'}
                   </p>
-                  <p className="text-sm">{request.reviewed_by_profile?.full_name || '—'}</p>
+                  <p className="text-sm">
+                    {request.status === 'cancelled'
+                      ? 'By employee'
+                      : request.reviewed_by_profile?.full_name || '—'}
+                  </p>
                 </div>
                 {request.review_note && (
                   <div className="text-right max-w-xs">
@@ -257,6 +268,10 @@ export default function LeaveApprovalTable({ requests, adminId, isPending }: Lea
                   </div>
                 )}
               </div>
+            </div>
+          ) : (
+            <div className="pt-3 border-t text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-tertiary)" }}>
+              {statusLabel(request.status)} — no action available in this view.
             </div>
           )}
         </div>

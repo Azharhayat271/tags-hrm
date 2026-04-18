@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import EmployeeTable from "@/components/employees/EmployeeTable";
 import EmployeeSearch from "@/components/employees/EmployeeSearch";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,22 +14,9 @@ export default async function EmployeesPage({
   searchParams: Promise<{ search?: string; status?: string; department?: string }>;
 }) {
   const params = await searchParams;
+  const ctx = await requirePagePermission("employees.view");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Check if user is admin or super_admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   // Build query with filters
   let query = supabase

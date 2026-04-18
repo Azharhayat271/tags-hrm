@@ -2,6 +2,13 @@
 
 import { formatDate } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
+import { isPendingStatus, statusLabel } from "@/lib/leave/balance";
+
+function badgeFor(status: string): string {
+  if (status === "approved") return "badge-success";
+  if (status === "rejected" || status === "cancelled") return "badge-danger";
+  return "badge-warning";
+}
 
 interface LeaveRequest {
   id: string;
@@ -58,15 +65,8 @@ export default function LeaveHistory({ requests }: LeaveHistoryProps) {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="text-base font-normal">{request.leave_types?.name}</h4>
-                  <span
-                    className={`badge ${
-                      request.status === 'approved' ? 'badge-success' :
-                      request.status === 'rejected' ? 'badge-danger' :
-                      request.status === 'cancelled' ? 'badge-danger' :
-                      'badge-warning'
-                    }`}
-                  >
-                    {request.status.toUpperCase()}
+                  <span className={`badge ${badgeFor(request.status)}`}>
+                    {statusLabel(request.status).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
@@ -102,7 +102,7 @@ export default function LeaveHistory({ requests }: LeaveHistoryProps) {
               </div>
             )}
 
-            {request.status !== 'pending' && (
+            {!isPendingStatus(request.status) && (
               <div className="pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
                 <div className="flex items-start justify-between">
                   <div>

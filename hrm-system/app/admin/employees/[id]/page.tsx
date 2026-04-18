@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, Briefcase, Calendar, Building, User, TrendingUp } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Briefcase, Calendar, Building, User, TrendingUp, ShieldCheck } from "lucide-react";
 import EmployeeActions from "@/components/employees/EmployeeActions";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,22 +14,9 @@ interface PageProps {
 
 export default async function EmployeeDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const ctx = await requirePagePermission("employees.view");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Check if user is admin or super_admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   // Fetch employee details
   const { data: employee, error } = await supabase
@@ -90,6 +78,13 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             >
               <TrendingUp className="w-4 h-4" />
               View Timeline
+            </Link>
+            <Link
+              href={`/admin/employees/${id}/permissions`}
+              className="btn-ghost flex items-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Permissions
             </Link>
             <EmployeeActions employeeId={id} currentStatus={employee.status} />
           </div>

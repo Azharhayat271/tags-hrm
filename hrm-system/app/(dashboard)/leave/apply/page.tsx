@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import ApplyLeaveForm from "@/components/leave/ApplyLeaveForm";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getBalances } from "@/lib/leave/balance";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApplyLeavePage() {
   const supabase = await createClient();
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -38,6 +40,19 @@ export default async function ApplyLeavePage() {
 
   const holidayDates = publicHolidays?.map(h => h.date) || [];
 
+  // Balances use the admin client so the helper can read across years without RLS churn.
+  const admin = await createAdminClient();
+  const balances = await getBalances(admin as any, (employee as { id: string }).id);
+  const balanceMap: Record<string, { remaining: number; used: number; pending: number; unlimited: boolean }> = {};
+  for (const b of balances) {
+    balanceMap[b.leaveTypeId] = {
+      remaining: b.unlimited ? Number.POSITIVE_INFINITY : b.remaining,
+      used: b.used,
+      pending: b.pending,
+      unlimited: b.unlimited,
+    };
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -58,10 +73,11 @@ export default async function ApplyLeavePage() {
       </div>
 
       <div className="max-w-2xl">
-        <ApplyLeaveForm 
+        <ApplyLeaveForm
           employeeId={employee.id}
           leaveTypes={leaveTypes || []}
           holidayDates={holidayDates}
+          balances={balanceMap}
         />
       </div>
     </div>

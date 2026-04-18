@@ -98,7 +98,40 @@ export default async function NotificationsPage() {
     });
   }
 
-  // Admin notifications
+  // Manager: requests from direct reports awaiting their approval
+  if (employee) {
+    const { data: directReports } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("reports_to", employee.id);
+    const reportIds = (directReports || []).map((r: any) => r.id);
+
+    if (reportIds.length > 0) {
+      const { data: teamPending } = await supabase
+        .from("leave_requests")
+        .select(`
+          *,
+          employee:employees(profile:profiles(full_name)),
+          leave_type:leave_types(name)
+        `)
+        .eq("status", "pending_manager")
+        .in("employee_id", reportIds)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      teamPending?.forEach((leave) => {
+        notifications.push({
+          type: "warning",
+          icon: AlertCircle,
+          title: "Approval needed",
+          message: `${leave.employee?.profile?.full_name} requested ${leave.leave_type?.name} for ${leave.days} day(s) — awaiting your approval`,
+          date: leave.created_at,
+        });
+      });
+    }
+  }
+
+  // HR/admin notifications: final sign-off queue
   if (profile?.role === "admin" || profile?.role === "super_admin") {
     const { data: pendingLeaves } = await supabase
       .from("leave_requests")
@@ -107,7 +140,7 @@ export default async function NotificationsPage() {
         employee:employees(profile:profiles(full_name)),
         leave_type:leave_types(name)
       `)
-      .eq("status", "pending")
+      .in("status", ["pending", "pending_hr"])
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -115,7 +148,7 @@ export default async function NotificationsPage() {
       notifications.push({
         type: "warning",
         icon: AlertCircle,
-        title: "Pending Leave Approval",
+        title: "Pending HR approval",
         message: `${leave.employee?.profile?.full_name} requested ${leave.leave_type?.name} for ${leave.days} day(s)`,
         date: leave.created_at,
       });

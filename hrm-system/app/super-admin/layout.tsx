@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { PERMISSION_KEYS } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function SuperAdminLayout({
     <div className="min-h-screen bg-surface-canvas">
       <Header profile={profile} />
       <div className="flex">
-        <Sidebar profile={profile} />
+        <Sidebar profile={profile} permissions={PERMISSION_KEYS} />
         <main className="flex-1 min-w-0 px-8 py-8">
           {children}
         </main>

@@ -94,21 +94,36 @@ export default function LeaveTypesManager({ leaveTypes }: LeaveTypesManagerProps
                 <label className="label">Days Per Year *</label>
                 <input
                   type="number"
-                  value={newLeaveType.days_per_year}
-                  onChange={(e) => setNewLeaveType({ ...newLeaveType, days_per_year: parseInt(e.target.value) })}
+                  value={Number.isFinite(newLeaveType.days_per_year) ? newLeaveType.days_per_year : 0}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    setNewLeaveType({
+                      ...newLeaveType,
+                      days_per_year: Number.isNaN(parsed) ? 0 : parsed,
+                    });
+                  }}
                   className="input"
-                  min="1"
+                  min="0"
                   max="365"
                   required
                 />
+                <p className="text-[11px] text-ink-tertiary mt-1">
+                  Use 0 for unpaid / unlimited types.
+                </p>
               </div>
 
               <div>
                 <label className="label">Carry Forward Limit</label>
                 <input
                   type="number"
-                  value={newLeaveType.carry_forward_limit}
-                  onChange={(e) => setNewLeaveType({ ...newLeaveType, carry_forward_limit: parseInt(e.target.value) })}
+                  value={Number.isFinite(newLeaveType.carry_forward_limit) ? newLeaveType.carry_forward_limit : 0}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    setNewLeaveType({
+                      ...newLeaveType,
+                      carry_forward_limit: Number.isNaN(parsed) ? 0 : parsed,
+                    });
+                  }}
                   className="input"
                   min="0"
                   max="365"

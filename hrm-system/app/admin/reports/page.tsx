@@ -4,30 +4,14 @@ import { FileText, Download, Calendar, Users, TrendingUp } from "lucide-react";
 import AttendanceReport from "@/components/reports/AttendanceReport";
 import LeaveReport from "@/components/reports/LeaveReport";
 import EmployeeReport from "@/components/reports/EmployeeReport";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
+  const ctx = await requirePagePermission("reports.view");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Check if user is admin or super admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    redirect("/dashboard");
-  }
 
   // Get current month data for quick stats
   const now = new Date();

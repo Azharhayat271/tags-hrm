@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { requirePagePermission } from "@/lib/permissions";
 import AttendanceReportTable from "@/components/attendance/AttendanceReportTable";
 import ExportButtons from "@/components/attendance/ExportButtons";
 import AttendanceFilters from "@/components/attendance/AttendanceFilters";
@@ -85,21 +86,9 @@ export default async function AdminAttendancePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const ctx = await requirePagePermission("attendance.reports");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   const rawParams = await searchParams;
   const paramsForFilter = new URLSearchParams();

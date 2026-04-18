@@ -3,26 +3,14 @@ import { redirect } from "next/navigation";
 import { Upload, FileText } from "lucide-react";
 import PayrollUploadForm from "@/components/payroll/PayrollUploadForm";
 import RecentUploads from "@/components/payroll/RecentUploads";
+import { requirePagePermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PayrollUploadPage() {
+  const ctx = await requirePagePermission("payroll.upload");
+  if (!ctx) redirect("/dashboard");
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Check if user is admin or super_admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user?.id)
-    .single();
-
-  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
-    redirect("/dashboard");
-  }
 
   // Get all active employees
   const { data: employees } = await supabase
@@ -68,7 +56,7 @@ export default async function PayrollUploadPage() {
         <div className="lg:col-span-2">
           <PayrollUploadForm 
             employees={normalizedEmployees}
-            adminId={user?.id || ''}
+            adminId={ctx.userId}
           />
         </div>
 

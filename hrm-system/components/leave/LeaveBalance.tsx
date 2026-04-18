@@ -8,6 +8,8 @@ interface LeaveType {
   days_per_year: number;
   used: number;
   remaining: number;
+  unlimited?: boolean;
+  pending?: number;
 }
 
 interface LeaveBalanceProps {
@@ -39,41 +41,46 @@ export default function LeaveBalance({ balances }: LeaveBalanceProps) {
       
       <div className="space-y-4">
         {balances.map((balance) => {
-          const percentage = (balance.used / balance.days_per_year) * 100;
-          
+          const unlimited = balance.unlimited || balance.days_per_year === 0;
+          const percentage = unlimited ? 0 : (balance.used / Math.max(1, balance.days_per_year)) * 100;
+
           return (
             <div key={balance.id}>
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-sm font-normal">{balance.name}</p>
                   <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-                    {balance.used} used of {balance.days_per_year} days
+                    {unlimited
+                      ? `${balance.used} used · unpaid (no quota)`
+                      : `${balance.used} used of ${balance.days_per_year} days`}
+                    {balance.pending ? ` · ${balance.pending} pending` : ""}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-light tabular-nums" style={{ color: "var(--accent)" }}>
-                    {balance.remaining}
+                    {unlimited ? "∞" : balance.remaining}
                   </p>
                   <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                    days left
+                    {unlimited ? "no limit" : "days left"}
                   </p>
                 </div>
               </div>
-              
-              {/* Progress bar */}
-              <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--tag-border)' }}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${percentage}%`,
-                    background: percentage >= 90 
-                      ? 'var(--tag-danger)' 
-                      : percentage >= 70 
-                      ? 'var(--tag-warning)' 
-                      : 'linear-gradient(90deg, var(--tag-orange), var(--tag-amber))',
-                  }}
-                />
-              </div>
+
+              {!unlimited && (
+                <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--tag-border)' }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${percentage}%`,
+                      background: percentage >= 90
+                        ? 'var(--tag-danger)'
+                        : percentage >= 70
+                        ? 'var(--tag-warning)'
+                        : 'linear-gradient(90deg, var(--tag-orange), var(--tag-amber))',
+                    }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}

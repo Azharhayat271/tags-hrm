@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasPermission, PermissionKey } from "@/lib/permissions";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.NEXT_PUBLIC_SUPABASE_URL?.split(".")[0] || "jwt-secret"
@@ -111,6 +112,41 @@ export function requireRole(...roles: string[]) {
   return (handler: (req: AuthenticatedRequest) => Promise<Response>) => {
     return async (req: AuthenticatedRequest) => {
       if (!roles.includes(req.userRole || "")) {
+        return new Response(
+          JSON.stringify({
+            error: true,
+            code: "FORBIDDEN",
+            message: "You don't have permission to perform this action",
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return handler(req);
+    };
+  };
+}
+
+/**
+ * Require a specific granular permission. Super-admin and admin roles pass
+ * automatically; employees pass only if they have an active grant for `key`.
+ */
+export function requirePermission(key: PermissionKey) {
+  return (handler: (req: AuthenticatedRequest) => Promise<Response>) => {
+    return async (req: AuthenticatedRequest) => {
+      if (!req.userId) {
+        return new Response(
+          JSON.stringify({
+            error: true,
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const ok = await hasPermission(req.userId, key);
+      if (!ok) {
         return new Response(
           JSON.stringify({
             error: true,
