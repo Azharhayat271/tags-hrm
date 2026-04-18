@@ -17,8 +17,10 @@ export interface AuthenticatedRequest extends NextRequest {
  * Extracts and validates JWT token from Authorization header
  * Attaches user info to request for handler use
  */
-export async function withAuth(handler: (req: AuthenticatedRequest) => Promise<Response>) {
-  return async (req: NextRequest) => {
+export function withAuth<T extends unknown[]>(
+  handler: (req: AuthenticatedRequest, ...args: T) => Promise<Response>
+) {
+  return async (req: NextRequest, ...args: T) => {
     try {
       // Get token from Authorization header
       const authHeader = req.headers.get("authorization");
@@ -71,7 +73,7 @@ export async function withAuth(handler: (req: AuthenticatedRequest) => Promise<R
         authReq.userRole = (profile as any)?.role || "employee";
         authReq.userEmail = (profile as any)?.email || data.user.email;
 
-        return handler(authReq);
+        return handler(authReq, ...args);
       }
 
       // Get user profile with role
@@ -87,7 +89,7 @@ export async function withAuth(handler: (req: AuthenticatedRequest) => Promise<R
       authReq.userRole = (profile as any)?.role || "employee";
       authReq.userEmail = (profile as any)?.email;
 
-      return handler(authReq);
+      return handler(authReq, ...args);
     } catch (error) {
       console.error("Auth middleware error:", error);
       return new Response(

@@ -7,8 +7,8 @@ import { useLoading } from './LoadingContext';
 export function useRouteChangeLoader() {
   const router = useRouter();
   const { startLoading, stopLoading } = useLoading();
-  const hideTimeoutRef = useRef<NodeJS.Timeout>();
-  const navigationTimeoutRef = useRef<NodeJS.Timeout>();
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

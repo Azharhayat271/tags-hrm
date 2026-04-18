@@ -19,16 +19,24 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
         id,
         status,
         created_at,
-        employee:employees(profile:profiles(full_name))
+        employees(
+          id,
+          profiles(id, full_name)
+        )
       `)
       .order("created_at", { ascending: false })
       .limit(5);
 
-    leaves?.forEach((leave) => {
+    leaves?.forEach((leave: any) => {
+      const employee = leave.employees;
+      const profile = Array.isArray(employee?.profiles)
+        ? employee.profiles[0]
+        : employee?.profiles;
+
       activities.push({
         type: "leave",
         icon: Calendar,
-        title: `${leave.employee?.profile?.full_name} requested leave`,
+        title: `${profile?.full_name || "Unknown"} requested leave`,
         status: leave.status,
         date: leave.created_at,
       });
@@ -41,16 +49,24 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
         id,
         event_type,
         created_at,
-        employee:employees(profile:profiles(full_name))
+        employees(
+          id,
+          profiles(id, full_name)
+        )
       `)
       .order("created_at", { ascending: false })
       .limit(3);
 
-    events?.forEach((event) => {
+    events?.forEach((event: any) => {
+      const employee = event.employees;
+      const profile = Array.isArray(employee?.profiles)
+        ? employee.profiles[0]
+        : employee?.profiles;
+
       activities.push({
         type: "lifecycle",
         icon: TrendingUp,
-        title: `${event.employee?.profile?.full_name} - ${event.event_type}`,
+        title: `${profile?.full_name || "Unknown"} - ${event.event_type}`,
         status: "info",
         date: event.created_at,
       });

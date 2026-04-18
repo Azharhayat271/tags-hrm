@@ -50,6 +50,13 @@ export default async function SlackSetupPage() {
     `)
     .order("profiles(full_name)");
 
+  const normalizedEmployees = (employees ?? []).map((employee) => ({
+    ...employee,
+    profiles: Array.isArray(employee.profiles)
+      ? employee.profiles[0] ?? null
+      : employee.profiles,
+  }));
+
   return (
     <div>
       <div className="mb-8">
@@ -131,7 +138,7 @@ export default async function SlackSetupPage() {
       </div>
 
       {/* Employee Mapping */}
-      <SlackMappingTable employees={employees || []} />
+      <SlackMappingTable employees={normalizedEmployees} />
     </div>
   );
 }

@@ -49,6 +49,20 @@ export default async function EditEmployeePage({ params }: PageProps) {
     .neq("id", id) // Exclude current employee
     .order("profiles(full_name)");
 
+  const normalizedEmployee = {
+    ...employee,
+    profiles: Array.isArray(employee.profiles)
+      ? employee.profiles[0] ?? null
+      : employee.profiles,
+  };
+
+  const normalizedManagers = (managers ?? []).map((manager) => ({
+    ...manager,
+    profiles: Array.isArray(manager.profiles)
+      ? manager.profiles[0] ?? null
+      : manager.profiles,
+  }));
+
   return (
     <div>
       <div className="mb-8">
@@ -61,7 +75,7 @@ export default async function EditEmployeePage({ params }: PageProps) {
       </div>
 
       <div className="max-w-3xl">
-        <EditEmployeeForm employee={employee} managers={managers || []} />
+        <EditEmployeeForm employee={normalizedEmployee} managers={normalizedManagers} />
       </div>
     </div>
   );

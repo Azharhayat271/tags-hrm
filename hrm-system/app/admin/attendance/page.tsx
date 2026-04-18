@@ -5,6 +5,36 @@ import { Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+interface EmployeeProfile {
+  full_name: string;
+  email: string;
+}
+
+interface EmployeeRow {
+  id: string;
+  profiles: EmployeeProfile | EmployeeProfile[] | null;
+}
+
+interface SessionRow {
+  id: string;
+  employee_id: string;
+  check_in: string;
+  check_out: string | null;
+  auto_closed_at: string | null;
+  auto_close_reason: string | null;
+}
+
+interface MatrixRow {
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  dayHours: Record<string, number>;
+  totalCompletedHours: number;
+  completedSessions: number;
+  openSessions: number;
+  autoClosedSessions: number;
+}
+
 export default async function AdminAttendancePage({
   searchParams,
 }: {
@@ -53,25 +83,131 @@ export default async function AdminAttendancePage({
     const monthOffset = params.month ? parseInt(params.month) : 0;
     startDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
     endDate = new Date(today.getFullYear(), today.getMonth() + monthOffset + 1, 0);
+    endDate.setHours(23, 59, 59, 999);
     periodLabel = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
-  // Fetch all employees with their attendance sessions for the period
-  const { data: employees } = await supabase
+  // Fetch all active employees first, then attach period sessions.
+  // This keeps zero-session employees visible in monthly reporting.
+  const { data: employeesData } = await supabase
     .from("employees")
     .select(`
       id,
-      profiles(full_name, email),
-      attendance_sessions(
-        id,
-        check_in,
-        check_out
-      )
+      profiles(full_name, email)
     `)
     .eq("status", "active")
-    .gte("attendance_sessions.check_in", startDate.toISOString())
-    .lte("attendance_sessions.check_in", endDate.toISOString())
-    .order("profiles(full_name)");
+    .order("id");
+
+  const employeesList: EmployeeRow[] = (employeesData ?? []) as EmployeeRow[];
+  const employeeIds = employeesList.map((employee) => employee.id);
+
+  let sessionsData: SessionRow[] = [];
+  if (employeeIds.length > 0) {
+    const { data } = await supabase
+        .from("attendance_sessions")
+        .select("id, employee_id, check_in, check_out, auto_closed_at, auto_close_reason")
+      .in("employee_id", employeeIds)
+      .gte("check_in", startDate.toISOString())
+      .lte("check_in", endDate.toISOString())
+      .order("check_in", { ascending: true });
+
+    sessionsData = (data ?? []) as SessionRow[];
+  }
+
+  const sessionsByEmployee = new Map<string, SessionRow[]>();
+  sessionsData.forEach((session) => {
+    const existing = sessionsByEmployee.get(session.employee_id) ?? [];
+    existing.push(session);
+    sessionsByEmployee.set(session.employee_id, existing);
+  });
+
+  const employees = employeesList
+    .map((employee) => {
+      const profile = Array.isArray(employee.profiles)
+        ? employee.profiles[0] ?? null
+        : employee.profiles;
+
+      return {
+        ...employee,
+        profiles: profile,
+        attendance_sessions: sessionsByEmployee.get(employee.id)?.map((session) => ({
+          id: session.id,
+          check_in: session.check_in,
+          check_out: session.check_out,
+          auto_closed_at: session.auto_closed_at,
+          auto_close_reason: session.auto_close_reason,
+        })) ?? [],
+      };
+    })
+    .sort((a, b) => {
+      const nameA = a.profiles?.full_name ?? "";
+      const nameB = b.profiles?.full_name ?? "";
+      return nameA.localeCompare(nameB);
+    });
+
+  const dayKeys: string[] = [];
+  const dayCursor = new Date(startDate);
+  dayCursor.setHours(0, 0, 0, 0);
+  const lastDay = new Date(endDate);
+  lastDay.setHours(0, 0, 0, 0);
+
+  while (dayCursor <= lastDay) {
+    dayKeys.push(dayCursor.toISOString().split("T")[0]);
+    dayCursor.setDate(dayCursor.getDate() + 1);
+  }
+
+  const matrixRows: MatrixRow[] = employees.map((employee) => {
+    const dayHours: Record<string, number> = {};
+    dayKeys.forEach((dayKey) => {
+      dayHours[dayKey] = 0;
+    });
+
+    let totalCompletedHours = 0;
+    let completedSessions = 0;
+    let openSessions = 0;
+    let autoClosedSessions = 0;
+
+    employee.attendance_sessions.forEach((session) => {
+      if (session.auto_closed_at) {
+        autoClosedSessions += 1;
+      }
+      if (!session.check_out) {
+        openSessions += 1;
+        return;
+      }
+
+      const start = new Date(session.check_in);
+      const end = new Date(session.check_out);
+      const durationMs = Math.max(0, end.getTime() - start.getTime());
+      const durationHours = durationMs / (1000 * 60 * 60);
+      const dayKey = start.toISOString().split("T")[0];
+
+      if (dayHours[dayKey] !== undefined) {
+        dayHours[dayKey] += durationHours;
+      }
+
+      totalCompletedHours += durationHours;
+      completedSessions += 1;
+    });
+
+    return {
+      employeeId: employee.id,
+      employeeName: employee.profiles?.full_name ?? "Unknown Employee",
+      employeeEmail: employee.profiles?.email ?? "",
+      dayHours,
+      totalCompletedHours,
+      completedSessions,
+      openSessions,
+      autoClosedSessions,
+    };
+  });
+
+  const matrixData = {
+    periodStart: startDate.toISOString(),
+    periodEnd: endDate.toISOString(),
+    dayKeys,
+    rows: matrixRows,
+  };
 
   return (
     <div>
@@ -92,10 +228,11 @@ export default async function AdminAttendancePage({
 
       <div className="card p-6">
         <AttendanceReportTable 
-          employees={employees || []} 
+          employees={employees}
           view={view}
           startDate={startDate}
           endDate={endDate}
+          matrixData={matrixData}
         />
       </div>
     </div>

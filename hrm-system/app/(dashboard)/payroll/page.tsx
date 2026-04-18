@@ -5,6 +5,13 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+interface SalarySlip {
+  id: string;
+  year: number;
+  month: number;
+  uploaded_at: string;
+}
+
 export default async function PayrollPage() {
   const supabase = await createClient();
   
@@ -33,7 +40,7 @@ export default async function PayrollPage() {
   }
 
   // Get salary slips
-  const { data: salarySlips } = await supabase
+  const { data: salarySlipsData } = await supabase
     .from("salary_slips")
     .select(`
       *,
@@ -43,12 +50,17 @@ export default async function PayrollPage() {
     .order("year", { ascending: false })
     .order("month", { ascending: false });
 
+  const salarySlips: SalarySlip[] = (salarySlipsData ?? []) as SalarySlip[];
+
   // Group by year
-  const slipsByYear = salarySlips?.reduce((acc, slip) => {
-    if (!acc[slip.year]) acc[slip.year] = [];
+  const slipsByYear = salarySlips.reduce<Record<number, SalarySlip[]>>((acc, slip) => {
+    if (!acc[slip.year]) {
+      acc[slip.year] = [];
+    }
+
     acc[slip.year].push(slip);
     return acc;
-  }, {} as Record<number, typeof salarySlips>) || {};
+  }, {});
 
   const years = Object.keys(slipsByYear).sort((a, b) => parseInt(b) - parseInt(a));
   const currentYear = new Date().getFullYear();

@@ -29,7 +29,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
-      <Header user={user} profile={profile} />
+      <Header profile={profile} />
       <div className="flex">
         <Sidebar profile={profile} />
         <main className="flex-1 p-8">

@@ -5,6 +5,14 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+interface AttendanceSession {
+  id: string;
+  check_in: string;
+  check_out: string | null;
+  auto_closed_at: string | null;
+  auto_close_reason: string | null;
+}
+
 export default async function EmployeeAttendanceDetailPage({
   params,
   searchParams,
@@ -49,17 +57,23 @@ export default async function EmployeeAttendanceDetailPage({
     redirect("/admin/attendance");
   }
 
+  const employeeProfile = Array.isArray(employee.profiles)
+    ? employee.profiles[0]
+    : employee.profiles;
+
   // Fetch all sessions for the period
-  const { data: sessions } = await supabase
+  const { data: sessionsData } = await supabase
     .from("attendance_sessions")
-    .select("*")
+    .select("id, check_in, check_out, auto_closed_at, auto_close_reason")
     .eq("employee_id", resolvedParams.id)
     .gte("check_in", startDate.toISOString())
     .lte("check_in", endDate.toISOString())
     .order("check_in", { ascending: false });
 
+  const sessions: AttendanceSession[] = (sessionsData ?? []) as AttendanceSession[];
+
   // Group sessions by date
-  const sessionsByDate = (sessions || []).reduce((acc, session) => {
+  const sessionsByDate = sessions.reduce((acc, session) => {
     const date = new Date(session.check_in).toDateString();
     if (!acc[date]) {
       acc[date] = [];
@@ -95,7 +109,7 @@ export default async function EmployeeAttendanceDetailPage({
     return { hours, minutes };
   };
 
-  const calculateDayTotal = (daySessions: typeof sessions) => {
+  const calculateDayTotal = (daySessions: AttendanceSession[]) => {
     let totalMs = 0;
     daySessions.forEach(session => {
       if (session.check_out) {
@@ -112,10 +126,14 @@ export default async function EmployeeAttendanceDetailPage({
   // Calculate overall stats
   let totalHours = 0;
   let totalMinutes = 0;
-  let totalSessions = sessions?.length || 0;
+  const totalSessions = sessions.length;
   let completedSessions = 0;
+  let autoClosedCount = 0;
 
-  sessions?.forEach(session => {
+  sessions.forEach(session => {
+    if (session.auto_closed_at) {
+      autoClosedCount += 1;
+    }
     if (session.check_out) {
       completedSessions++;
       const duration = calculateDuration(session.check_in, session.check_out);
@@ -130,6 +148,80 @@ export default async function EmployeeAttendanceDetailPage({
   totalMinutes = totalMinutes % 60;
 
   const periodLabel = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+  // Generate calendar structure for monthly view
+  const calendarStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  const calendarEndDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+  
+  const calendarDayKeys: string[] = [];
+  const dayCursor = new Date(calendarStartDate);
+  dayCursor.setHours(0, 0, 0, 0);
+  const lastDay = new Date(calendarEndDate);
+  lastDay.setHours(0, 0, 0, 0);
+
+  while (dayCursor <= lastDay) {
+    calendarDayKeys.push(dayCursor.toISOString().split("T")[0]);
+    dayCursor.setDate(dayCursor.getDate() + 1);
+  }
+
+  // Build calendar data: hours per day and presence
+  const calendarData: Record<string, { hours: number; status: 'present' | 'absent' }> = {};
+  calendarDayKeys.forEach(dayKey => {
+    calendarData[dayKey] = { hours: 0, status: 'absent' };
+  });
+
+  sessions.forEach(session => {
+    if (session.check_out) {
+      const dayKey = new Date(session.check_in).toISOString().split("T")[0];
+      const start = new Date(session.check_in);
+      const end = new Date(session.check_out);
+      const durationMs = Math.max(0, end.getTime() - start.getTime());
+      const durationHours = durationMs / (1000 * 60 * 60);
+      
+      if (calendarData[dayKey]) {
+        calendarData[dayKey].hours += durationHours;
+        calendarData[dayKey].status = 'present';
+      }
+    }
+  });
+
+  const getDateCellStyle = (dayData: { hours: number; status: 'present' | 'absent' }) => {
+    if (dayData.status === 'absent') {
+      return {
+        backgroundColor: 'rgba(239,68,68,0.09)',
+        color: 'var(--tag-danger)',
+      };
+    }
+    if (dayData.hours >= 8) {
+      return {
+        backgroundColor: 'rgba(22,163,74,0.13)',
+        color: 'var(--tag-success)',
+      };
+    }
+    return {
+      backgroundColor: 'rgba(217,119,6,0.14)',
+      color: 'var(--tag-warning)',
+    };
+  };
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const firstDayOfWeek = calendarStartDate.getDay();
+  const calendarGrid: (string | null)[][] = [];
+  let currentWeek: (string | null)[] = Array(firstDayOfWeek).fill(null);
+
+  for (const dayKey of calendarDayKeys) {
+    currentWeek.push(dayKey);
+    if (currentWeek.length === 7) {
+      calendarGrid.push(currentWeek);
+      currentWeek = [];
+    }
+  }
+  if (currentWeek.length > 0) {
+    while (currentWeek.length < 7) {
+      currentWeek.push(null);
+    }
+    calendarGrid.push(currentWeek);
+  }
 
   return (
     <div>
@@ -147,10 +239,10 @@ export default async function EmployeeAttendanceDetailPage({
         <div className="flex items-start justify-between">
           <div>
             <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
-              {employee.profiles?.full_name}
+              {employeeProfile?.full_name}
             </h1>
             <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
-              {employee.profiles?.email}
+              {employeeProfile?.email}
             </p>
             <p className="text-sm mt-1" style={{ color: 'var(--tag-label)' }}>
               {periodLabel}
@@ -181,9 +273,87 @@ export default async function EmployeeAttendanceDetailPage({
         </div>
         <div className="card p-4">
           <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
-            Days Worked
+            Auto-Closed
           </p>
-          <p className="text-2xl font-light">{Object.keys(sessionsByDate).length}</p>
+          <p className="text-2xl font-light">{autoClosedCount}</p>
+        </div>
+      </div>
+
+      {/* Monthly Attendance Calendar */}
+      <div className="card p-6 mb-8">
+        <h2 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
+          Monthly Calendar - {calendarStartDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </h2>
+
+        {/* Legend */}
+        <div className="mb-4 flex items-center gap-4 text-xs" style={{ color: 'var(--tag-body)' }}>
+          <span className="inline-flex items-center gap-2">
+            <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(22,163,74,0.13)' }} />
+            Full day (8h+)
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(217,119,6,0.14)' }} />
+            Partial (&lt;8h)
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(239,68,68,0.09)' }} />
+            Absent (0h)
+          </span>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="overflow-x-auto" style={{ border: '1px solid var(--tag-border)', borderRadius: '0.75rem' }}>
+          <table className="w-full">
+            <thead>
+              <tr style={{ backgroundColor: 'var(--tag-paper)' }}>
+                {weekDays.map(day => (
+                  <th key={day} className="px-2 py-3 text-center text-sm font-medium" style={{ color: 'var(--tag-label)' }}>
+                    {day}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {calendarGrid.map((week, weekIdx) => (
+                <tr key={weekIdx}>
+                  {week.map((dayKey, dayIdx) => {
+                    if (!dayKey) {
+                      return (
+                        <td key={`empty-${dayIdx}`} className="px-2 py-4 bg-gray-50" />
+                      );
+                    }
+
+                    const dayData = calendarData[dayKey];
+                    const date = new Date(dayKey);
+                    const cellStyle = getDateCellStyle(dayData);
+
+                    return (
+                      <td
+                        key={dayKey}
+                        className="px-2 py-4 text-center border"
+                        style={{
+                          borderColor: 'var(--tag-border)',
+                          ...cellStyle,
+                          minHeight: '100px',
+                          verticalAlign: 'top'
+                        }}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="text-sm font-medium">{date.getDate()}</div>
+                          <div className="text-xs" style={{ color: dayData.status === 'absent' ? 'var(--tag-danger)' : 'var(--tag-success)' }}>
+                            {dayData.status === 'absent' ? '✕ Absent' : '✓ Present'}
+                          </div>
+                          <div className="text-sm font-medium">
+                            {dayData.hours.toFixed(1)}h
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -231,7 +401,12 @@ export default async function EmployeeAttendanceDetailPage({
                               Session {daySessions.length - idx}
                             </span>
                           </div>
-                          {!session.check_out && (
+                          {session.auto_closed_at && (
+                            <span className="badge-warning text-xs" title={`Auto-closed: ${session.auto_close_reason}`}>
+                              ⚙️ Auto-Closed
+                            </span>
+                          )}
+                          {!session.check_out && !session.auto_closed_at && (
                             <span className="badge-warning text-xs">In Progress</span>
                           )}
                           {duration && (

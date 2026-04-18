@@ -20,7 +20,9 @@ export async function logAuditAction(entry: AuditLogEntry): Promise<void> {
   try {
     const supabase = await createAdminClient();
 
-    const { error } = await supabase.from("audit_logs").insert({
+    const auditLogsTable = supabase.from("audit_logs") as any;
+
+    const { error } = await auditLogsTable.insert({
       user_id: entry.user_id,
       operation: entry.operation,
       table_name: entry.table_name,
@@ -57,7 +59,8 @@ export async function logAuditActionsBatch(entries: AuditLogEntry[]): Promise<vo
       created_at: new Date().toISOString(),
     }));
 
-    const { error } = await supabase.from("audit_logs").insert(logsToInsert);
+    const auditLogsTable = supabase.from("audit_logs") as any;
+    const { error } = await auditLogsTable.insert(logsToInsert);
 
     if (error) {
       console.error("Failed to log audit actions batch:", error);

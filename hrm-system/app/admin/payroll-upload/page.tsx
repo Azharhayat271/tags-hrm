@@ -31,6 +31,13 @@ export default async function PayrollUploadPage() {
     .eq("status", "active")
     .order("profiles(full_name)");
 
+  const normalizedEmployees = (employees ?? []).map((employee) => ({
+    ...employee,
+    profiles: Array.isArray(employee.profiles)
+      ? employee.profiles[0] ?? null
+      : employee.profiles,
+  }));
+
   // Get recent uploads
   const { data: recentUploads } = await supabase
     .from("salary_slips")
@@ -60,7 +67,7 @@ export default async function PayrollUploadPage() {
         {/* Upload Form */}
         <div className="lg:col-span-2">
           <PayrollUploadForm 
-            employees={employees || []}
+            employees={normalizedEmployees}
             adminId={user?.id || ''}
           />
         </div>
