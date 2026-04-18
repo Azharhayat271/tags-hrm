@@ -1,521 +1,577 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Calendar, Clock, ArrowRight } from "lucide-react";
-
-interface Employee {
-  id: string;
-  profiles: {
-    full_name: string;
-    email: string;
-  } | null;
-  attendance_sessions: Array<{
-    id: string;
-    check_in: string;
-    check_out: string | null;
-    auto_closed_at: string | null;
-    auto_close_reason: string | null;
-  }>;
-}
+import { useMemo } from "react";
+import { ArrowRight, AlertCircle } from "lucide-react";
+import type {
+  AttendanceMatrix,
+  AttendanceMatrixRow,
+  DayCell,
+} from "@/lib/attendance/aggregate";
+import type { ViewMode } from "@/lib/attendance/filters";
 
 interface AttendanceReportTableProps {
-  employees: Employee[];
-  view: string;
-  startDate: Date;
-  endDate: Date;
-  matrixData?: {
-    periodStart: string;
-    periodEnd: string;
-    dayKeys: string[];
-    rows: Array<{
-      employeeId: string;
-      employeeName: string;
-      employeeEmail: string;
-      dayHours: Record<string, number>;
-      totalCompletedHours: number;
-      completedSessions: number;
-      openSessions: number;
-      autoClosedSessions: number;
-    }>;
+  matrix: AttendanceMatrix;
+  view: ViewMode;
+  rangeStart: string;
+  rangeEnd: string;
+}
+
+const WEEK_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function formatDay(dayKey: string) {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return {
+    date,
+    weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
+    day: date.getDate(),
+    monthShort: date.toLocaleDateString("en-US", { month: "short" }),
   };
 }
 
-export default function AttendanceReportTable({ 
-  employees, 
+function cellStyleFor(cell: DayCell, isFuture: boolean): React.CSSProperties {
+  if (isFuture) {
+    return {
+      backgroundColor: "var(--tag-bg)",
+      color: "var(--tag-body)",
+    };
+  }
+  if (cell.isHoliday) {
+    return {
+      backgroundColor: "rgba(148, 163, 184, 0.08)",
+      color: "var(--tag-body)",
+    };
+  }
+  if (cell.isWeekend) {
+    if (cell.total > 0) {
+      return {
+        backgroundColor: "rgba(249, 115, 22, 0.12)",
+        color: "var(--tag-orange-deep)",
+      };
+    }
+    return {
+      backgroundColor: "rgba(148, 163, 184, 0.06)",
+      color: "var(--tag-body)",
+    };
+  }
+  if (cell.total >= 8) {
+    return {
+      backgroundColor: "rgba(22,163,74,0.13)",
+      color: "var(--tag-success)",
+    };
+  }
+  if (cell.total > 0) {
+    return {
+      backgroundColor: "rgba(234,179,8,0.15)",
+      color: "var(--tag-warning)",
+    };
+  }
+  return {
+    backgroundColor: "rgba(239,68,68,0.09)",
+    color: "var(--tag-danger)",
+  };
+}
+
+function tooltipFor(row: AttendanceMatrixRow, cell: DayCell, dayKey: string): string {
+  const parts: string[] = [`${row.employeeName} – ${dayKey}`, `${cell.total.toFixed(2)}h`];
+  if (cell.overtime > 0) parts.push(`OT ${cell.overtime.toFixed(2)}h`);
+  if (cell.firstCheckIn) parts.push(`First in ${cell.firstCheckIn}`);
+  if (cell.isWeekend) parts.push("Weekend");
+  if (cell.isHoliday) parts.push(`Holiday: ${cell.holidayName}`);
+  if (cell.flags.includes("manual")) parts.push("Has manual entry");
+  if (cell.flags.includes("auto_closed")) parts.push("Has auto-closed session");
+  if (cell.hasOpenSession) parts.push("Has open session");
+  return parts.join(" · ");
+}
+
+export default function AttendanceReportTable({
+  matrix,
   view,
-  startDate,
-  endDate,
-  matrixData,
+  rangeStart,
+  rangeEnd,
 }: AttendanceReportTableProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [monthlyMode, setMonthlyMode] = useState<"summary" | "matrix">("matrix");
+  const todayKey = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  }, []);
 
-  const calculateWorkHours = (sessions: Employee['attendance_sessions']) => {
-    let totalMs = 0;
-    let completedSessions = 0;
-    let autoClosedSessions = 0;
-    
-    sessions.forEach(session => {
-      if (session.auto_closed_at) {
-        autoClosedSessions++;
-      }
-      if (session.check_in && session.check_out) {
-        completedSessions++;
-        const start = new Date(session.check_in);
-        const end = new Date(session.check_out);
-        totalMs += end.getTime() - start.getTime();
-      }
-    });
-    
-    const totalHours = Math.floor(totalMs / (1000 * 60 * 60));
-    const totalMinutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
-    const avgHoursPerDay = completedSessions > 0 ? (totalMs / completedSessions / (1000 * 60 * 60)).toFixed(1) : "0.0";
-    
-    // Count unique days worked
-    const uniqueDays = new Set(
-      sessions
-        .filter(s => s.check_in)
-        .map(s => new Date(s.check_in).toDateString())
-    ).size;
-    
-    return {
-      totalHours,
-      totalMinutes,
-      totalSessions: sessions.length,
-      completedSessions,
-      autoClosedSessions,
-      daysWorked: uniqueDays,
-      avgHoursPerDay,
-    };
-  };
-
-  const handleViewChange = (newView: string) => {
-    router.push(`/admin/attendance?view=${newView}`);
-  };
-
-  const handleMonthChange = (offset: number) => {
-    const currentMonth = searchParams.get("month") ? parseInt(searchParams.get("month")!) : 0;
-    router.push(`/admin/attendance?view=monthly&month=${currentMonth + offset}`);
-  };
-
-  const matrixSummary = useMemo(() => {
-    if (!matrixData) {
-      return {
-        totalWorkHours: 0,
-        totalCompletedSessions: 0,
-        totalOpenSessions: 0,
-        totalAutoClosedSessions: 0,
-      };
-    }
-
-    return matrixData.rows.reduce(
-      (acc, row) => {
-        acc.totalWorkHours += row.totalCompletedHours;
-        acc.totalCompletedSessions += row.completedSessions;
-        acc.totalOpenSessions += row.openSessions;
-        acc.totalAutoClosedSessions += row.autoClosedSessions;
-        return acc;
-      },
-      {
-        totalWorkHours: 0,
-        totalCompletedSessions: 0,
-        totalOpenSessions: 0,
-        totalAutoClosedSessions: 0,
-      }
-    );
-  }, [matrixData]);
-
-  const getHoursCellStyle = (hours: number, dateStr?: string) => {
-    // Check if date is in the future
-    if (dateStr) {
-      const cellDate = new Date(dateStr);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Future dates - white background
-      if (cellDate > today) {
-        return {
-          backgroundColor: "#ffffff",
-          color: "var(--tag-body)",
-          border: "1px solid var(--tag-border)",
-        };
-      }
-    }
-
-    // Past dates with data
-    if (hours >= 8) {
-      return {
-        backgroundColor: "rgba(22,163,74,0.13)",
-        color: "var(--tag-success)",
-      };
-    }
-
-    // Yellow for 0 < hours < 8
-    if (hours > 0) {
-      return {
-        backgroundColor: "rgba(234,179,8,0.15)",
-        color: "var(--tag-warning)",
-      };
-    }
-
-    // Red/pink for absent (0 hours)
-    return {
-      backgroundColor: "rgba(239,68,68,0.09)",
-      color: "var(--tag-danger)",
-    };
-  };
-
-  const isMonthlyMatrixMode = view === "monthly" && monthlyMode === "matrix" && !!matrixData;
-
-  const renderMonthlyMatrix = () => {
-    if (!matrixData) {
-      return (
-        <div className="text-center py-12">
-          <p style={{ color: "var(--tag-body)" }}>No monthly matrix data available</p>
-        </div>
-      );
-    }
-
-    const dayTotals: Record<string, number> = {};
-    matrixData.dayKeys.forEach((dayKey) => {
-      dayTotals[dayKey] = matrixData.rows.reduce((sum, row) => sum + (row.dayHours[dayKey] || 0), 0);
-    });
-
+  if (matrix.rows.length === 0) {
     return (
-      <div>
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--tag-body)" }}>
-            <Calendar className="w-4 h-4" />
-            <span>{matrixData.dayKeys.length} calendar days in view</span>
-          </div>
-          <div className="flex items-center gap-3 text-xs" style={{ color: "var(--tag-body)" }}>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#ffffff", border: "1px solid #ccc" }} />
-              Future Days
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(22,163,74,0.13)" }} />
-              Full day (8h+)
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(234,179,8,0.15)" }} />
-              Partial (0-8h)
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(239,68,68,0.09)" }} />
-              Absent (0h)
-            </span>
-          </div>
-        </div>
-
-        <div className="table-container overflow-x-auto" style={{ border: "1px solid var(--tag-border)", borderRadius: "0.75rem" }}>
-          <table className="w-full min-w-max">
-            <thead>
-              <tr className="table-header">
-                <th
-                  className="text-left px-4 py-3 sticky left-0 z-20"
-                  style={{ backgroundColor: "var(--tag-paper, #fff)" }}
-                >
-                  Employee
-                </th>
-                {matrixData.dayKeys.map((dayKey) => {
-                  const day = new Date(dayKey);
-                  return (
-                    <th key={dayKey} className="text-center px-2 py-3 min-w-[76px]">
-                      <div className="text-[11px]" style={{ color: "var(--tag-label)" }}>
-                        {day.toLocaleDateString("en-US", { weekday: "short" })}
-                      </div>
-                      <div className="text-sm tabular-nums">{day.getDate()}</div>
-                    </th>
-                  );
-                })}
-                <th className="text-center px-4 py-3 sticky right-0 z-20" style={{ backgroundColor: "var(--tag-paper, #fff)" }}>
-                  Total
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {matrixData.rows.map((row) => (
-                <tr key={row.employeeId} className="table-row">
-                  <td
-                    className="px-4 py-3 sticky left-0 z-10"
-                    style={{ backgroundColor: "var(--tag-paper, #fff)" }}
-                  >
-                    <div>
-                      <p className="font-normal leading-tight">{row.employeeName}</p>
-                      <p className="text-xs" style={{ color: "var(--tag-body)" }}>
-                        {row.employeeEmail}
-                      </p>
-                      {row.openSessions > 0 && (
-                        <span className="badge badge-warning mt-2">{row.openSessions} open</span>
-                      )}
-                      {row.autoClosedSessions > 0 && (
-                        <span className="badge badge-default mt-2" style={{ backgroundColor: 'rgba(100,116,139,0.1)', color: 'var(--tag-label)' }}>
-                          ⚙️ {row.autoClosedSessions} auto-closed
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {matrixData.dayKeys.map((dayKey) => {
-                    const hours = row.dayHours[dayKey] || 0;
-                    const cellStyle = getHoursCellStyle(hours, dayKey);
-
-                    return (
-                      <td
-                        key={`${row.employeeId}-${dayKey}`}
-                        className="px-2 py-3 text-center tabular-nums"
-                        title={`${row.employeeName} - ${dayKey}: ${hours.toFixed(2)}h`}
-                        style={cellStyle}
-                      >
-                        {hours.toFixed(1)}
-                      </td>
-                    );
-                  })}
-
-                  <td
-                    className="px-4 py-3 text-center tabular-nums font-medium sticky right-0 z-10"
-                    style={{ backgroundColor: "var(--tag-paper, #fff)" }}
-                  >
-                    {row.totalCompletedHours.toFixed(1)}h
-                    <div className="text-xs mt-1">
-                      <Link
-                        href={`/admin/attendance/${row.employeeId}?start=${startDate.toISOString()}&end=${endDate.toISOString()}`}
-                        className="hover:underline"
-                        style={{ color: "var(--tag-orange)" }}
-                      >
-                        details
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              <tr className="table-row" style={{ backgroundColor: "var(--tag-bg-warm)" }}>
-                <td className="px-4 py-3 font-medium sticky left-0 z-10" style={{ backgroundColor: "var(--tag-bg-warm)" }}>
-                  Daily Total
-                </td>
-                {matrixData.dayKeys.map((dayKey) => (
-                  <td key={`totals-${dayKey}`} className="px-2 py-3 text-center tabular-nums font-medium">
-                    {dayTotals[dayKey].toFixed(1)}
-                  </td>
-                ))}
-                <td className="px-4 py-3 text-center tabular-nums font-semibold sticky right-0 z-10" style={{ backgroundColor: "var(--tag-bg-warm)" }}>
-                  {matrixSummary.totalWorkHours.toFixed(1)}h
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  if (employees.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--tag-body)' }}>No attendance data found</p>
+      <div className="flex flex-col items-center justify-center gap-2 py-16">
+        <AlertCircle className="w-6 h-6" style={{ color: "var(--tag-body)" }} />
+        <p style={{ color: "var(--tag-body)" }}>No employees match the current filters.</p>
       </div>
     );
   }
 
+  if (view === "matrix") {
+    return (
+      <MatrixView
+        matrix={matrix}
+        todayKey={todayKey}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+      />
+    );
+  }
+
+  if (view === "calendar") {
+    return (
+      <CalendarView
+        matrix={matrix}
+        todayKey={todayKey}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+      />
+    );
+  }
+
+  return <SummaryView matrix={matrix} rangeStart={rangeStart} rangeEnd={rangeEnd} />;
+}
+
+function MatrixView({
+  matrix,
+  todayKey,
+  rangeStart,
+  rangeEnd,
+}: {
+  matrix: AttendanceMatrix;
+  todayKey: string;
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  const dayTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    matrix.dayKeys.forEach((dk) => {
+      totals[dk] = matrix.rows.reduce((s, r) => s + (r.dayHours[dk]?.total || 0), 0);
+    });
+    return totals;
+  }, [matrix]);
+
+  const overallTotal = matrix.period.totalsAcrossEmployees.totalHours;
+
   return (
-    <div>
-      {/* View Toggle and Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleViewChange("monthly")}
-            className={view === "monthly" ? "btn-primary" : "btn-ghost"}
+    <table className="w-full min-w-max border-collapse">
+      <thead>
+        <tr
+          className="table-header sticky top-0"
+          style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 20 }}
+        >
+          <th
+            className="text-left px-4 py-2 sticky left-0"
+            style={{
+              backgroundColor: "var(--tag-bg-warm)",
+              minWidth: "220px",
+              zIndex: 21,
+            }}
           >
-            Monthly
-          </button>
-          <button
-            onClick={() => handleViewChange("weekly")}
-            className={view === "weekly" ? "btn-primary" : "btn-ghost"}
+            Employee
+          </th>
+          {matrix.dayKeys.map((dk) => {
+            const info = formatDay(dk);
+            const isWknd = matrix.weekendDayKeys.has(dk);
+            const isHol = matrix.holidayDayKeys.has(dk);
+            const dimmed = isWknd || isHol;
+            return (
+              <th
+                key={dk}
+                className="text-center px-1.5 py-2"
+                style={{
+                  minWidth: "58px",
+                  color: dimmed ? "var(--tag-body)" : "var(--tag-label)",
+                  opacity: dimmed ? 0.75 : 1,
+                }}
+                title={isHol ? `Holiday: ${matrix.holidayDayKeys.get(dk)}` : isWknd ? "Weekend" : ""}
+              >
+                <div className="text-[10px] uppercase">{info.weekday}</div>
+                <div className="text-sm tabular-nums">{info.day}</div>
+              </th>
+            );
+          })}
+          <th
+            className="text-center px-3 py-2 sticky right-0"
+            style={{ backgroundColor: "var(--tag-bg-warm)", minWidth: "90px", zIndex: 21 }}
           >
-            Weekly
-          </button>
-
-          {view === "monthly" && (
-            <>
-              <button
-                onClick={() => setMonthlyMode("matrix")}
-                className={monthlyMode === "matrix" ? "btn-primary" : "btn-ghost"}
-              >
-                Matrix
-              </button>
-              <button
-                onClick={() => setMonthlyMode("summary")}
-                className={monthlyMode === "summary" ? "btn-primary" : "btn-ghost"}
-              >
-                Summary Table
-              </button>
-            </>
-          )}
-        </div>
-
-        {view === "monthly" && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleMonthChange(-1)}
-              className="btn-ghost"
+            Total
+          </th>
+          <th
+            className="text-center px-3 py-2 sticky right-0"
+            style={{
+              backgroundColor: "var(--tag-bg-warm)",
+              minWidth: "80px",
+              right: "90px",
+              zIndex: 21,
+            }}
+          >
+            OT
+          </th>
+          <th
+            className="text-center px-2 py-2"
+            style={{ minWidth: "70px" }}
+          >
+            Absent
+          </th>
+          <th
+            className="text-center px-3 py-2"
+            style={{ minWidth: "90px" }}
+          >
+            Details
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {matrix.rows.map((row) => (
+          <tr key={row.employeeId} className="table-row">
+            <td
+              className="px-4 py-2 sticky left-0"
+              style={{ backgroundColor: "var(--tag-bg)", zIndex: 10 }}
             >
-              ← Previous
-            </button>
-            <button
-              onClick={() => handleMonthChange(1)}
-              className="btn-ghost"
-            >
-              Next →
-            </button>
-          </div>
-        )}
-      </div>
-
-      {isMonthlyMatrixMode ? (
-        renderMonthlyMatrix()
-      ) : (
-      <div className="table-container">
-        <table className="w-full">
-          <thead>
-            <tr className="table-header">
-              <th className="text-left px-4 py-3">Employee</th>
-              <th className="text-center px-4 py-3">Days Worked</th>
-              <th className="text-center px-4 py-3">Total Sessions</th>
-              <th className="text-center px-4 py-3">Total Hours</th>
-              <th className="text-center px-4 py-3">Avg Hours/Session</th>
-              <th className="text-center px-4 py-3">Status</th>
-              <th className="text-center px-4 py-3">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee) => {
-              const stats = calculateWorkHours(employee.attendance_sessions || []);
-              const expectedHours = view === "weekly" ? 40 : 160;
-              const hoursPercentage = expectedHours > 0 
-                ? Math.round((stats.totalHours / expectedHours) * 100) 
-                : 0;
-              
+              <p className="font-normal leading-tight">{row.employeeName}</p>
+              <p className="text-[11px]" style={{ color: "var(--tag-body)" }}>
+                {row.employeeEmail}
+              </p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {row.totals.openSessions > 0 && (
+                  <span className="badge badge-warning">{row.totals.openSessions} open</span>
+                )}
+                {row.totals.autoClosedSessions > 0 && (
+                  <span
+                    className="badge"
+                    style={{ backgroundColor: "rgba(100,116,139,0.1)", color: "var(--tag-label)" }}
+                  >
+                    ⚙ {row.totals.autoClosedSessions}
+                  </span>
+                )}
+                {row.totals.manualEntrySessions > 0 && (
+                  <span className="badge badge-orange">M {row.totals.manualEntrySessions}</span>
+                )}
+              </div>
+            </td>
+            {matrix.dayKeys.map((dk) => {
+              const cell = row.dayHours[dk];
+              const isFuture = dk > todayKey;
+              const style = cellStyleFor(cell, isFuture);
               return (
-                <tr key={employee.id} className="table-row">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-normal">{employee.profiles?.full_name}</p>
-                      <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
-                        {employee.profiles?.email}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">
-                    <span className="badge-primary">{stats.daysWorked}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">
-                    <div className="inline-flex flex-col items-center gap-1">
-                      <span style={{ color: 'var(--tag-body)' }}>
-                        {stats.completedSessions}/{stats.totalSessions}
-                      </span>
-                      {stats.autoClosedSessions > 0 && (
-                        <span className="badge badge-default" style={{ backgroundColor: 'rgba(100,116,139,0.1)', color: 'var(--tag-label)' }}>
-                          ⚙️ {stats.autoClosedSessions}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">
-                    <span className="font-medium">
-                      {stats.totalHours}h {stats.totalMinutes}m
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">
-                    <span style={{ color: 'var(--tag-body)' }}>
-                      {stats.avgHoursPerDay}h
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">
-                    <span
-                      className={`badge ${
-                        hoursPercentage >= 90 ? 'badge-success' :
-                        hoursPercentage >= 75 ? 'badge-warning' :
-                        'badge-danger'
-                      }`}
+                <td
+                  key={`${row.employeeId}-${dk}`}
+                  className="px-1.5 py-1 text-center tabular-nums"
+                  title={tooltipFor(row, cell, dk)}
+                  style={style}
+                >
+                  <div className="text-sm leading-tight">
+                    {cell.total > 0 ? cell.total.toFixed(1) : isFuture ? "" : "—"}
+                  </div>
+                  {cell.overtime > 0 && (
+                    <div
+                      className="text-[10px] leading-tight"
+                      style={{ color: "var(--tag-orange-deep)" }}
                     >
-                      {hoursPercentage}%
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Link
-                      href={`/admin/attendance/${employee.id}?start=${startDate.toISOString()}&end=${endDate.toISOString()}`}
-                      className="inline-flex items-center gap-1 text-sm hover:underline"
-                      style={{ color: 'var(--tag-orange)' }}
-                    >
-                      View Details
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </td>
-                </tr>
+                      +{cell.overtime.toFixed(1)} OT
+                    </div>
+                  )}
+                </td>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-      )}
+            <td
+              className="px-3 py-2 text-center tabular-nums font-medium sticky right-0"
+              style={{ backgroundColor: "var(--tag-bg)", zIndex: 10 }}
+            >
+              {row.totals.totalHours.toFixed(1)}h
+            </td>
+            <td
+              className="px-3 py-2 text-center tabular-nums sticky right-0"
+              style={{
+                backgroundColor: "var(--tag-bg)",
+                right: "90px",
+                zIndex: 10,
+                color: row.totals.overtimeHours > 0 ? "var(--tag-orange-deep)" : "var(--tag-body)",
+              }}
+            >
+              {row.totals.overtimeHours > 0 ? `${row.totals.overtimeHours.toFixed(1)}h` : "—"}
+            </td>
+            <td className="px-2 py-2 text-center tabular-nums" style={{ color: "var(--tag-body)" }}>
+              {row.totals.daysAbsent}
+            </td>
+            <td className="px-3 py-2 text-center text-sm">
+              <Link
+                href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
+                className="inline-flex items-center gap-1 hover:underline"
+                style={{ color: "var(--tag-orange)" }}
+              >
+                View
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </td>
+          </tr>
+        ))}
+        <tr
+          style={{
+            backgroundColor: "var(--tag-bg-warm)",
+            borderTop: "2px solid var(--tag-border)",
+          }}
+        >
+          <td
+            className="px-4 py-2 font-medium sticky left-0"
+            style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}
+          >
+            Daily totals
+          </td>
+          {matrix.dayKeys.map((dk) => (
+            <td
+              key={`totals-${dk}`}
+              className="px-1.5 py-2 text-center tabular-nums font-medium"
+            >
+              {dayTotals[dk] > 0 ? dayTotals[dk].toFixed(1) : "—"}
+            </td>
+          ))}
+          <td
+            className="px-3 py-2 text-center tabular-nums font-semibold sticky right-0"
+            style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}
+          >
+            {overallTotal.toFixed(1)}h
+          </td>
+          <td
+            className="px-3 py-2 text-center tabular-nums sticky right-0"
+            style={{
+              backgroundColor: "var(--tag-bg-warm)",
+              right: "90px",
+              zIndex: 10,
+              color: "var(--tag-orange-deep)",
+            }}
+          >
+            {matrix.period.totalsAcrossEmployees.overtimeHours.toFixed(1)}h
+          </td>
+          <td className="px-2 py-2 text-center" style={{ color: "var(--tag-body)" }}>
+            {matrix.period.totalsAcrossEmployees.totalAbsentDays}
+          </td>
+          <td />
+        </tr>
+      </tbody>
+    </table>
+  );
+}
 
-      {/* Summary Stats */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
-            Total Employees
+function SummaryView({
+  matrix,
+  rangeStart,
+  rangeEnd,
+}: {
+  matrix: AttendanceMatrix;
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  return (
+    <table className="w-full">
+      <thead>
+        <tr className="table-header sticky top-0" style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}>
+          <th className="text-left px-4 py-3">Employee</th>
+          <th className="text-center px-3 py-3">Present</th>
+          <th className="text-center px-3 py-3">Partial</th>
+          <th className="text-center px-3 py-3">Absent</th>
+          <th className="text-center px-3 py-3">Total</th>
+          <th className="text-center px-3 py-3">Regular</th>
+          <th className="text-center px-3 py-3">Overtime</th>
+          <th className="text-center px-3 py-3">Attendance</th>
+          <th className="text-center px-3 py-3">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {matrix.rows.map((row) => (
+          <tr key={row.employeeId} className="table-row">
+            <td className="px-4 py-3">
+              <p className="font-normal">{row.employeeName}</p>
+              <p className="text-xs" style={{ color: "var(--tag-body)" }}>
+                {row.employeeEmail}
+                {row.departmentName ? ` · ${row.departmentName}` : ""}
+              </p>
+            </td>
+            <td className="px-3 py-3 text-center tabular-nums">
+              <span className="badge badge-success">{row.totals.daysPresent}</span>
+            </td>
+            <td className="px-3 py-3 text-center tabular-nums">
+              <span className="badge badge-warning">{row.totals.daysPartial}</span>
+            </td>
+            <td className="px-3 py-3 text-center tabular-nums">
+              <span
+                className="badge"
+                style={{
+                  backgroundColor:
+                    row.totals.daysAbsent > 0 ? "var(--tag-danger-bg)" : "var(--tag-bg-warm)",
+                  color: row.totals.daysAbsent > 0 ? "#dc2626" : "var(--tag-body)",
+                }}
+              >
+                {row.totals.daysAbsent}
+              </span>
+            </td>
+            <td className="px-3 py-3 text-center tabular-nums font-medium">
+              {row.totals.totalHours.toFixed(1)}h
+            </td>
+            <td className="px-3 py-3 text-center tabular-nums" style={{ color: "var(--tag-body)" }}>
+              {row.totals.regularHours.toFixed(1)}h
+            </td>
+            <td
+              className="px-3 py-3 text-center tabular-nums"
+              style={{
+                color: row.totals.overtimeHours > 0 ? "var(--tag-orange-deep)" : "var(--tag-body)",
+              }}
+            >
+              {row.totals.overtimeHours > 0 ? `${row.totals.overtimeHours.toFixed(1)}h` : "—"}
+            </td>
+            <td className="px-3 py-3 text-center">
+              <span
+                className={`badge ${
+                  row.totals.attendancePercentage >= 90
+                    ? "badge-success"
+                    : row.totals.attendancePercentage >= 75
+                    ? "badge-warning"
+                    : "badge-danger"
+                }`}
+              >
+                {row.totals.attendancePercentage}%
+              </span>
+            </td>
+            <td className="px-3 py-3 text-center">
+              <Link
+                href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
+                className="inline-flex items-center gap-1 text-sm hover:underline"
+                style={{ color: "var(--tag-orange)" }}
+              >
+                View
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function CalendarView({
+  matrix,
+  todayKey,
+  rangeStart,
+  rangeEnd,
+}: {
+  matrix: AttendanceMatrix;
+  todayKey: string;
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  return (
+    <div className="p-4 space-y-6">
+      {matrix.rows.map((row) => (
+        <CalendarRow
+          key={row.employeeId}
+          row={row}
+          matrix={matrix}
+          todayKey={todayKey}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CalendarRow({
+  row,
+  matrix,
+  todayKey,
+  rangeStart,
+  rangeEnd,
+}: {
+  row: AttendanceMatrixRow;
+  matrix: AttendanceMatrix;
+  todayKey: string;
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  const firstDay = formatDay(matrix.dayKeys[0]).date;
+  const leadingBlanks = ((firstDay.getDay() + 6) % 7);
+  const cells: Array<{ key: string; empty?: boolean }> = [];
+  for (let i = 0; i < leadingBlanks; i++) cells.push({ key: `blank-${i}`, empty: true });
+  matrix.dayKeys.forEach((dk) => cells.push({ key: dk }));
+  while (cells.length % 7 !== 0) cells.push({ key: `trail-${cells.length}`, empty: true });
+
+  return (
+    <div
+      className="rounded-md border"
+      style={{ borderColor: "var(--tag-border)", backgroundColor: "var(--tag-bg)" }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: "var(--tag-border)" }}
+      >
+        <div>
+          <p className="font-normal">{row.employeeName}</p>
+          <p className="text-xs" style={{ color: "var(--tag-body)" }}>
+            {row.totals.totalHours.toFixed(1)}h · OT {row.totals.overtimeHours.toFixed(1)}h ·{" "}
+            {row.totals.attendancePercentage}% attendance
           </p>
-          <p className="text-2xl font-light">{employees.length}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
-            Auto-Closed Sessions
-          </p>
-          <p className="text-2xl font-light">
-            {isMonthlyMatrixMode
-              ? matrixSummary.totalAutoClosedSessions
-              : employees.reduce((sum, emp) => {
-                  const stats = calculateWorkHours(emp.attendance_sessions || []);
-                  return sum + stats.autoClosedSessions;
-                }, 0)}
-          </p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
-            Total Work Hours
-          </p>
-          <p className="text-2xl font-light">
-            {isMonthlyMatrixMode
-              ? `${matrixSummary.totalWorkHours.toFixed(1)}h`
-              : `${employees.reduce((sum, emp) => {
-                  const stats = calculateWorkHours(emp.attendance_sessions || []);
-                  return sum + stats.totalHours;
-                }, 0)}h`}
-          </p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
-            {isMonthlyMatrixMode ? "Open Sessions" : "Avg Hours per Employee"}
-          </p>
-          <p className="text-2xl font-light">
-            {isMonthlyMatrixMode
-              ? matrixSummary.totalOpenSessions
-              : `${employees.length > 0
-                  ? (
-                      employees.reduce((sum, emp) => {
-                        const stats = calculateWorkHours(emp.attendance_sessions || []);
-                        return sum + stats.totalHours;
-                      }, 0) / employees.length
-                    ).toFixed(1)
-                  : 0}h`}
-          </p>
-        </div>
+        <Link
+          href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
+          className="text-sm hover:underline inline-flex items-center gap-1"
+          style={{ color: "var(--tag-orange)" }}
+        >
+          Details <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: "var(--tag-border)" }}>
+        {WEEK_HEADERS.map((h) => (
+          <div
+            key={h}
+            className="px-2 py-1.5 text-[11px] uppercase tracking-wide text-center"
+            style={{ backgroundColor: "var(--tag-bg-warm)", color: "var(--tag-label)" }}
+          >
+            {h}
+          </div>
+        ))}
+        {cells.map((c) => {
+          if (c.empty) {
+            return (
+              <div
+                key={c.key}
+                style={{ backgroundColor: "var(--tag-bg-warm)", minHeight: "54px" }}
+              />
+            );
+          }
+          const cell = row.dayHours[c.key];
+          const info = formatDay(c.key);
+          const isFuture = c.key > todayKey;
+          const style = cellStyleFor(cell, isFuture);
+          return (
+            <div
+              key={c.key}
+              className="px-2 py-1.5"
+              style={{ ...style, minHeight: "54px" }}
+              title={tooltipFor(row, cell, c.key)}
+            >
+              <div
+                className="text-[11px] font-medium"
+                style={{ color: isFuture ? "var(--tag-body)" : undefined, opacity: isFuture ? 0.6 : 1 }}
+              >
+                {info.day}
+              </div>
+              <div className="text-sm tabular-nums leading-tight">
+                {cell.total > 0 ? `${cell.total.toFixed(1)}h` : isFuture ? "" : "—"}
+              </div>
+              {cell.overtime > 0 && (
+                <div
+                  className="text-[10px] tabular-nums"
+                  style={{ color: "var(--tag-orange-deep)" }}
+                >
+                  +{cell.overtime.toFixed(1)} OT
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

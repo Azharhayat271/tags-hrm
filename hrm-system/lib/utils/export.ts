@@ -1,63 +1,89 @@
+import type { AttendanceMatrix } from "@/lib/attendance/aggregate";
+
 export interface ExportRow {
-  Employee: string;
-  Email: string;
   [key: string]: string | number;
 }
 
-/**
- * Generate and download CSV file
- */
-export function generateCSV(rows: ExportRow[], filename: string = "attendance.csv"): void {
+function escapeCsv(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const str = String(value);
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+export function generateCSV(rows: ExportRow[], filename = "export"): void {
   if (rows.length === 0) return;
-
-  // Get all headers
   const headers = Object.keys(rows[0]);
-
-  // Create CSV content
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) =>
-      headers
-        .map((header) => {
-          const value = row[header];
-          // Escape quotes and wrap in quotes if contains comma
-          const stringValue = String(value);
-          return stringValue.includes(",") || stringValue.includes('"')
-            ? `"${stringValue.replace(/"/g, '""')}"`
-            : stringValue;
-        })
-        .join(",")
-    ),
+  const body = [
+    headers.map(escapeCsv).join(","),
+    ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(",")),
   ].join("\n");
-
-  // Create blob and download
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8;" });
   downloadFile(blob, `${filename}.csv`);
 }
 
-/**
- * Generate and download Excel file (TSV format that Excel recognizes)
- */
-export function generateExcel(rows: ExportRow[], filename: string = "attendance"): void {
-  if (rows.length === 0) return;
+export function downloadMatrixCsv(matrix: AttendanceMatrix, filename: string): void {
+  const headers = [
+    "Employee",
+    "Email",
+    "Department",
+    ...matrix.dayKeys,
+    "Total",
+    "Regular",
+    "Overtime",
+    "Present",
+    "Partial",
+    "Absent",
+    "Attendance %",
+  ];
 
-  const headers = Object.keys(rows[0]);
+  const rows = matrix.rows.map((row) => {
+    const out: (string | number)[] = [
+      row.employeeName,
+      row.employeeEmail,
+      row.departmentName ?? "",
+      ...matrix.dayKeys.map((dk) => (row.dayHours[dk]?.total || 0).toFixed(2)),
+      row.totals.totalHours.toFixed(2),
+      row.totals.regularHours.toFixed(2),
+      row.totals.overtimeHours.toFixed(2),
+      row.totals.daysPresent,
+      row.totals.daysPartial,
+      row.totals.daysAbsent,
+      `${row.totals.attendancePercentage}%`,
+    ];
+    return out;
+  });
 
-  // Create TSV content (tab-separated) which Excel reads natively
-  const tsvContent = [
-    headers.join("\t"),
-    ...rows.map((row) => headers.map((header) => row[header]).join("\t")),
+  const dailyTotals = matrix.dayKeys.map((dk) =>
+    matrix.rows.reduce((s, r) => s + (r.dayHours[dk]?.total || 0), 0).toFixed(2)
+  );
+  const t = matrix.period.totalsAcrossEmployees;
+  const totalsRow: (string | number)[] = [
+    "Daily totals",
+    "",
+    "",
+    ...dailyTotals,
+    t.totalHours.toFixed(2),
+    t.regularHours.toFixed(2),
+    t.overtimeHours.toFixed(2),
+    "",
+    "",
+    t.totalAbsentDays,
+    `${t.attendancePercentage}%`,
+  ];
+
+  const body = [
+    headers.map(escapeCsv).join(","),
+    ...rows.map((r) => r.map(escapeCsv).join(",")),
+    totalsRow.map(escapeCsv).join(","),
   ].join("\n");
 
-  const blob = new Blob([tsvContent], {
-    type: "text/tab-separated-values;charset=utf-8;",
-  });
-  downloadFile(blob, `${filename}.xls`);
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8;" });
+  downloadFile(blob, `${filename}.csv`);
 }
 
-/**
- * Helper function to trigger file download
- */
 function downloadFile(blob: Blob, filename: string): void {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");

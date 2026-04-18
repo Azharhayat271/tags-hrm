@@ -42,7 +42,6 @@ export default function Sidebar({ profile }: SidebarProps) {
   ];
 
   const superAdminLinks = [
-    { href: "/admin/slack-setup", label: "Slack Integration", icon: Settings },
     { href: "/super-admin/admins", label: "Manage Admins", icon: Users },
     { href: "/super-admin/settings", label: "System Settings", icon: Settings },
   ];

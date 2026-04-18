@@ -66,18 +66,13 @@ export default async function ProfilePage() {
   return (
     <div>
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
-              My Profile
-            </h1>
-            <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
-              View your personal and employment information
-            </p>
-          </div>
-          <Link href="/profile-link-slack" className="btn-ghost">
-            {profile?.slack_user_id ? "Manage Slack Link" : "Link Slack Account"}
-          </Link>
+        <div>
+          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+            My Profile
+          </h1>
+          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+            View your personal and employment information
+          </p>
         </div>
       </div>
 

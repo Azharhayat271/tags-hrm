@@ -1,37 +1,48 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Download, FileSpreadsheet, FileText, File } from "lucide-react";
-import type { AttendanceMatrix } from "@/lib/attendance/aggregate";
+import { ChevronDown, Download, FileSpreadsheet, FileText } from "lucide-react";
+import type { AttendanceMatrix, AttendanceMatrixRow } from "@/lib/attendance/aggregate";
 
-interface ExportButtonsProps {
+interface EmployeeExportButtonsProps {
   matrix: AttendanceMatrix;
-  filename: string;
+  row: AttendanceMatrixRow;
+  sessions: Array<{
+    check_in: string;
+    check_out: string | null;
+    is_manual_entry?: boolean | null;
+    auto_closed_at?: string | null;
+  }>;
   periodLabel: string;
+  filename: string;
 }
 
-export default function ExportButtons({ matrix, filename, periodLabel }: ExportButtonsProps) {
+export default function EmployeeExportButtons({
+  matrix,
+  row,
+  sessions,
+  periodLabel,
+  filename,
+}: EmployeeExportButtonsProps) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState<"xlsx" | "pdf" | "csv" | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState<"xlsx" | "pdf" | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, [open]);
-
-  const close = () => setOpen(false);
 
   const handleXlsx = async () => {
     try {
       setBusy("xlsx");
-      close();
-      const { exportMatrixXlsx } = await import("@/lib/attendance/exporters/xlsx");
-      await exportMatrixXlsx(matrix, { periodLabel }, filename);
+      setOpen(false);
+      const { exportEmployeeXlsx } = await import("@/lib/attendance/exporters/xlsx");
+      await exportEmployeeXlsx(row, matrix, sessions, { periodLabel }, filename);
     } finally {
       setBusy(null);
     }
@@ -40,27 +51,16 @@ export default function ExportButtons({ matrix, filename, periodLabel }: ExportB
   const handlePdf = async () => {
     try {
       setBusy("pdf");
-      close();
-      const { downloadMatrixPdf } = await import("@/lib/attendance/exporters/pdf");
-      await downloadMatrixPdf(matrix, periodLabel, filename);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleCsv = async () => {
-    try {
-      setBusy("csv");
-      close();
-      const { downloadMatrixCsv } = await import("@/lib/utils/export");
-      downloadMatrixCsv(matrix, filename);
+      setOpen(false);
+      const { downloadEmployeePdf } = await import("@/lib/attendance/exporters/pdf");
+      await downloadEmployeePdf(row, matrix, periodLabel, sessions, filename);
     } finally {
       setBusy(null);
     }
   };
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
         disabled={busy !== null}
@@ -71,7 +71,6 @@ export default function ExportButtons({ matrix, filename, periodLabel }: ExportB
         {busy ? `Exporting ${busy.toUpperCase()}…` : "Export"}
         <ChevronDown className="w-3.5 h-3.5" />
       </button>
-
       {open && (
         <div
           className="absolute right-0 top-full mt-1 rounded-md border overflow-hidden"
@@ -83,16 +82,15 @@ export default function ExportButtons({ matrix, filename, periodLabel }: ExportB
             zIndex: 50,
           }}
         >
-          <MenuItem icon={FileSpreadsheet} label="Excel (.xlsx)" onClick={handleXlsx} />
-          <MenuItem icon={FileText} label="PDF (.pdf)" onClick={handlePdf} />
-          <MenuItem icon={File} label="CSV (.csv)" onClick={handleCsv} />
+          <Item icon={FileSpreadsheet} label="Excel (.xlsx)" onClick={handleXlsx} />
+          <Item icon={FileText} label="PDF (.pdf)" onClick={handlePdf} />
         </div>
       )}
     </div>
   );
 }
 
-function MenuItem({
+function Item({
   icon: Icon,
   label,
   onClick,
@@ -104,7 +102,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors"
+      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
       style={{ color: "var(--tag-heading)" }}
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--tag-bg-warm)")}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}

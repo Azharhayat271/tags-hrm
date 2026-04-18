@@ -2,114 +2,95 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AttendanceReportTable from "@/components/attendance/AttendanceReportTable";
 import ExportButtons from "@/components/attendance/ExportButtons";
-import { Download } from "lucide-react";
+import AttendanceFilters from "@/components/attendance/AttendanceFilters";
+import {
+  parseFilterParams,
+  type AttendanceFilterState,
+} from "@/lib/attendance/filters";
+import KpiStrip from "@/components/attendance/KpiStrip";
+import {
+  computeAttendanceMatrix,
+  type RawEmployee,
+  type RawSession,
+  type RawHoliday,
+} from "@/lib/attendance/aggregate";
 
 export const dynamic = "force-dynamic";
 
-interface EmployeeProfile {
-  full_name: string;
-  email: string;
-}
-
-interface EmployeeRow {
+interface EmployeeRecord {
   id: string;
-  profiles: EmployeeProfile | EmployeeProfile[] | null;
+  department_id: string | null;
+  profiles: { full_name: string; email: string } | { full_name: string; email: string }[] | null;
+  departments?: { name: string } | { name: string }[] | null;
 }
 
-interface SessionRow {
-  id: string;
-  employee_id: string;
-  check_in: string;
-  check_out: string | null;
-  auto_closed_at: string | null;
-  auto_close_reason: string | null;
-  is_manual_entry?: boolean;
-  manual_added_at?: string;
+function extractProfile(record: EmployeeRecord) {
+  const p = Array.isArray(record.profiles) ? record.profiles[0] ?? null : record.profiles;
+  return p;
 }
 
-interface MatrixRow {
-  employeeId: string;
-  employeeName: string;
-  employeeEmail: string;
-  dayHours: Record<string, number>;
-  totalCompletedHours: number;
-  completedSessions: number;
-  openSessions: number;
-  autoClosedSessions: number;
-  manualEntrySessions: number;
+function extractDepartmentName(record: EmployeeRecord): string | null {
+  const d = Array.isArray(record.departments) ? record.departments[0] ?? null : record.departments;
+  return d?.name ?? null;
 }
 
-/**
- * Prepare attendance data for export (CSV/Excel)
- */
-function prepareExportData(
-  matrixRows: MatrixRow[],
-  dayKeys: string[]
-): Record<string, string | number>[] {
-  const rows: Record<string, string | number>[] = [];
+function startOfWeek(d: Date): Date {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  return copy;
+}
 
-  // Add rows for each employee
-  matrixRows.forEach((row) => {
-    const exportRow: Record<string, string | number> = {
-      Employee: row.employeeName,
-      Email: row.employeeEmail,
-    };
+function endOfWeek(d: Date): Date {
+  const copy = startOfWeek(d);
+  copy.setDate(copy.getDate() + 6);
+  copy.setHours(23, 59, 59, 999);
+  return copy;
+}
 
-    // Add hours for each day
-    dayKeys.forEach((dayKey) => {
-      const date = new Date(dayKey);
-      const dateHeader = `${date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })} (${date.toLocaleDateString("en-US", { weekday: "short" })})`;
-      exportRow[dateHeader] = parseFloat((row.dayHours[dayKey] || 0).toFixed(1));
-    });
-
-    exportRow["Total Hours"] = parseFloat(row.totalCompletedHours.toFixed(1));
-    rows.push(exportRow);
-  });
-
-  // Add daily totals row
-  const dayTotals: Record<string, number> = {};
-  dayKeys.forEach((dayKey) => {
-    dayTotals[dayKey] = matrixRows.reduce(
-      (sum, row) => sum + (row.dayHours[dayKey] || 0),
-      0
-    );
-  });
-
-  const totalsRow: Record<string, string | number> = {
-    Employee: "Daily Total",
-    Email: "",
-  };
-  dayKeys.forEach((dayKey) => {
-    const date = new Date(dayKey);
-    const dateHeader = `${date.toLocaleDateString("en-US", {
+function resolveRange(state: AttendanceFilterState): { start: Date; end: Date; label: string } {
+  const today = new Date();
+  if (state.period === "week") {
+    const base = new Date(today);
+    base.setDate(base.getDate() + state.weekOffset * 7);
+    const start = startOfWeek(base);
+    const end = endOfWeek(base);
+    const label = `Week of ${start.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-    })} (${date.toLocaleDateString("en-US", { weekday: "short" })})`;
-    totalsRow[dateHeader] = parseFloat((dayTotals[dayKey] || 0).toFixed(1));
-  });
-  totalsRow["Total Hours"] = parseFloat(
-    matrixRows.reduce((sum, row) => sum + row.totalCompletedHours, 0).toFixed(1)
-  );
-  rows.push(totalsRow);
-
-  return rows;
+    })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return { start, end, label };
+  }
+  if (state.period === "custom" && state.customStart && state.customEnd) {
+    const start = new Date(`${state.customStart}T00:00:00`);
+    const end = new Date(`${state.customEnd}T23:59:59.999`);
+    const label = `${start.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return { start, end, label };
+  }
+  const offset = state.period === "custom" ? 0 : state.monthOffset;
+  const start = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + offset + 1, 0);
+  end.setHours(23, 59, 59, 999);
+  const label = start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return { start, end, label };
 }
 
 export default async function AdminAttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; month?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = await createClient();
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Check if user is admin or super_admin
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -120,191 +101,169 @@ export default async function AdminAttendancePage({
     redirect("/dashboard");
   }
 
-  const params = await searchParams;
-  const view = params.view || "monthly";
-  const today = new Date();
-  
-  let startDate: Date;
-  let endDate: Date;
-  let periodLabel: string;
+  const rawParams = await searchParams;
+  const paramsForFilter = new URLSearchParams();
+  Object.entries(rawParams).forEach(([k, v]) => {
+    if (typeof v === "string") paramsForFilter.set(k, v);
+    else if (Array.isArray(v) && v[0]) paramsForFilter.set(k, v[0]);
+  });
 
-  if (view === "weekly") {
-    // Get current week (Monday to Sunday)
-    const dayOfWeek = today.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to Monday
-    startDate = new Date(today);
-    startDate.setDate(today.getDate() + diff);
-    startDate.setHours(0, 0, 0, 0);
-    
-    endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    endDate.setHours(23, 59, 59, 999);
-    
-    periodLabel = `Week of ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  } else {
-    // Monthly view
-    const monthOffset = params.month ? parseInt(params.month) : 0;
-    startDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
-    endDate = new Date(today.getFullYear(), today.getMonth() + monthOffset + 1, 0);
-    endDate.setHours(23, 59, 59, 999);
-    periodLabel = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // Back-compat with old ?view=monthly|weekly links
+  if (paramsForFilter.get("view") === "monthly" || paramsForFilter.get("view") === "weekly") {
+    paramsForFilter.set("period", paramsForFilter.get("view") === "weekly" ? "week" : "month");
+    paramsForFilter.set("view", "matrix");
   }
 
-  // Fetch all active employees first, then attach period sessions.
-  // This keeps zero-session employees visible in monthly reporting.
+  const filterState = parseFilterParams(paramsForFilter);
+  const { start: startDate, end: endDate, label: periodLabel } = resolveRange(filterState);
+
   const { data: employeesData } = await supabase
     .from("employees")
-    .select(`
+    .select(
+      `
       id,
-      profiles(full_name, email)
-    `)
+      department_id,
+      profiles!inner(full_name, email, role),
+      departments(name)
+    `
+    )
     .eq("status", "active")
+    .eq("profiles.role", "employee")
     .order("id");
 
-  const employeesList: EmployeeRow[] = (employeesData ?? []) as EmployeeRow[];
-  const employeeIds = employeesList.map((employee) => employee.id);
+  const employeesList = (employeesData ?? []) as EmployeeRecord[];
+  const employeeIds = employeesList.map((e) => e.id);
 
-  let sessionsData: SessionRow[] = [];
+  let sessionsData: RawSession[] = [];
   if (employeeIds.length > 0) {
     const { data } = await supabase
-        .from("attendance_sessions")
-        .select("id, employee_id, check_in, check_out, auto_closed_at, auto_close_reason, is_manual_entry, manual_added_at")
+      .from("attendance_sessions")
+      .select(
+        "id, employee_id, check_in, check_out, auto_closed_at, auto_close_reason, is_manual_entry, manual_added_at"
+      )
       .in("employee_id", employeeIds)
       .gte("check_in", startDate.toISOString())
       .lte("check_in", endDate.toISOString())
       .order("check_in", { ascending: true });
-
-    sessionsData = (data ?? []) as SessionRow[];
+    sessionsData = (data ?? []) as RawSession[];
   }
 
-  const sessionsByEmployee = new Map<string, SessionRow[]>();
-  sessionsData.forEach((session) => {
-    const existing = sessionsByEmployee.get(session.employee_id) ?? [];
-    existing.push(session);
-    sessionsByEmployee.set(session.employee_id, existing);
-  });
+  const { data: holidaysData } = await supabase
+    .from("public_holidays")
+    .select("date, name")
+    .gte("date", startDate.toISOString().split("T")[0])
+    .lte("date", endDate.toISOString().split("T")[0]);
+  const holidays: RawHoliday[] = holidaysData ?? [];
 
-  const employees = employeesList
-    .map((employee) => {
-      const profile = Array.isArray(employee.profiles)
-        ? employee.profiles[0] ?? null
-        : employee.profiles;
+  const { data: departmentsData } = await supabase
+    .from("departments")
+    .select("id, name")
+    .order("name");
+  const departments = (departmentsData ?? []) as Array<{ id: string; name: string }>;
 
+  const rawEmployees: RawEmployee[] = employeesList
+    .map((record) => {
+      const p = extractProfile(record);
       return {
-        ...employee,
-        profiles: profile,
-        attendance_sessions: sessionsByEmployee.get(employee.id)?.map((session) => ({
-          id: session.id,
-          check_in: session.check_in,
-          check_out: session.check_out,
-          auto_closed_at: session.auto_closed_at,
-          auto_close_reason: session.auto_close_reason,
-          is_manual_entry: session.is_manual_entry,
-          manual_added_at: session.manual_added_at,
-        })) ?? [],
+        id: record.id,
+        full_name: p?.full_name ?? "Unknown Employee",
+        email: p?.email ?? "",
+        department_id: record.department_id,
+        department_name: extractDepartmentName(record),
       };
     })
-    .sort((a, b) => {
-      const nameA = a.profiles?.full_name ?? "";
-      const nameB = b.profiles?.full_name ?? "";
-      return nameA.localeCompare(nameB);
-    });
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
-  const dayKeys: string[] = [];
-  const dayCursor = new Date(startDate);
-  dayCursor.setHours(0, 0, 0, 0);
-  const lastDay = new Date(endDate);
-  lastDay.setHours(0, 0, 0, 0);
-
-  while (dayCursor <= lastDay) {
-    dayKeys.push(dayCursor.toISOString().split("T")[0]);
-    dayCursor.setDate(dayCursor.getDate() + 1);
-  }
-
-  const matrixRows: MatrixRow[] = employees.map((employee) => {
-    const dayHours: Record<string, number> = {};
-    dayKeys.forEach((dayKey) => {
-      dayHours[dayKey] = 0;
-    });
-
-    let totalCompletedHours = 0;
-    let completedSessions = 0;
-    let openSessions = 0;
-    let autoClosedSessions = 0;
-    let manualEntrySessions = 0;
-
-    employee.attendance_sessions.forEach((session) => {
-      if (session.is_manual_entry) {
-        manualEntrySessions += 1;
-      }
-      if (session.auto_closed_at) {
-        autoClosedSessions += 1;
-      }
-      if (!session.check_out) {
-        openSessions += 1;
-        return;
-      }
-
-      const start = new Date(session.check_in);
-      const end = new Date(session.check_out);
-      const durationMs = Math.max(0, end.getTime() - start.getTime());
-      const durationHours = durationMs / (1000 * 60 * 60);
-      const dayKey = start.toISOString().split("T")[0];
-
-      if (dayHours[dayKey] !== undefined) {
-        dayHours[dayKey] += durationHours;
-      }
-
-      totalCompletedHours += durationHours;
-      completedSessions += 1;
-    });
-
-    return {
-      employeeId: employee.id,
-      employeeName: employee.profiles?.full_name ?? "Unknown Employee",
-      employeeEmail: employee.profiles?.email ?? "",
-      dayHours,
-      totalCompletedHours,
-      completedSessions,
-      openSessions,
-      autoClosedSessions,
-      manualEntrySessions,
-    };
+  const filteredEmployees = rawEmployees.filter((emp) => {
+    if (filterState.departmentId && emp.department_id !== filterState.departmentId) return false;
+    if (filterState.search) {
+      const needle = filterState.search.toLowerCase();
+      if (!emp.full_name.toLowerCase().includes(needle) && !emp.email.toLowerCase().includes(needle))
+        return false;
+    }
+    return true;
   });
 
-  // Prepare export data
-  const exportData = prepareExportData(matrixRows, dayKeys);
-  const exportFilename = `attendance-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}`;
+  const filteredEmployeeIds = new Set(filteredEmployees.map((e) => e.id));
+  const filteredSessions = sessionsData.filter((s) => filteredEmployeeIds.has(s.employee_id));
 
-  const matrixData = {
-    periodStart: startDate.toISOString(),
-    periodEnd: endDate.toISOString(),
-    dayKeys,
-    rows: matrixRows,
+  const matrix = computeAttendanceMatrix({
+    employees: filteredEmployees,
+    sessions: filteredSessions,
+    holidays,
+    range: { start: startDate, end: endDate },
+  });
+
+  const rowsAfterChips =
+    filterState.statusChips.size === 0
+      ? matrix.rows
+      : matrix.rows.filter((row) => {
+          const chips = filterState.statusChips;
+          if (chips.has("overtime") && row.totals.overtimeHours === 0) return false;
+          if (chips.has("open") && row.totals.openSessions === 0) return false;
+          if (chips.has("auto_closed") && row.totals.autoClosedSessions === 0) return false;
+          if (chips.has("manual") && row.totals.manualEntrySessions === 0) return false;
+          return true;
+        });
+
+  const displayedMatrix = {
+    ...matrix,
+    rows: rowsAfterChips,
   };
 
+  const exportFilename = `attendance-${matrix.period.start}-to-${matrix.period.end}`;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div
+      className="flex flex-col"
+      style={{
+        height: "calc(100vh - 73px - 4rem)",
+        margin: "-2rem",
+        padding: "1.25rem 1.5rem",
+        gap: "1rem",
+        overflow: "hidden",
+        minWidth: 0,
+        width: "auto",
+      }}
+    >
+      <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
-          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
-            Work Hours Summary
+          <h1 style={{ fontSize: "1.75rem", lineHeight: 1.1, letterSpacing: "-0.56px" }}>
+            Attendance
           </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
-            {periodLabel} - All Employees
+          <p className="text-sm mt-1" style={{ color: "var(--tag-body)" }}>
+            {periodLabel} · {displayedMatrix.rows.length} of {matrix.rows.length} employees
           </p>
         </div>
-        <ExportButtons data={exportData} filename={exportFilename} />
+        <ExportButtons
+          matrix={displayedMatrix}
+          filename={exportFilename}
+          periodLabel={periodLabel}
+        />
       </div>
 
-      <div className="card p-6" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-          <AttendanceReportTable 
-            employees={employees}
-            view={view}
-            startDate={startDate}
-            endDate={endDate}
-            matrixData={matrixData}
+      <div className="shrink-0">
+        <AttendanceFilters
+          state={filterState}
+          periodLabel={periodLabel}
+          departments={departments}
+        />
+      </div>
+
+      <div className="shrink-0">
+        <KpiStrip period={displayedMatrix.period} employeeCount={displayedMatrix.rows.length} />
+      </div>
+
+      <div
+        className="card flex-1 flex flex-col overflow-hidden"
+        style={{ padding: 0, minHeight: 0, minWidth: 0 }}
+      >
+        <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "auto" }}>
+          <AttendanceReportTable
+            matrix={displayedMatrix}
+            view={filterState.view}
+            rangeStart={matrix.period.start}
+            rangeEnd={matrix.period.end}
           />
         </div>
       </div>
