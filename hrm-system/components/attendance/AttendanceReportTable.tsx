@@ -128,7 +128,24 @@ export default function AttendanceReportTable({
     );
   }, [matrixData]);
 
-  const getHoursCellStyle = (hours: number) => {
+  const getHoursCellStyle = (hours: number, dateStr?: string) => {
+    // Check if date is in the future
+    if (dateStr) {
+      const cellDate = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Future dates - white background
+      if (cellDate > today) {
+        return {
+          backgroundColor: "#ffffff",
+          color: "var(--tag-body)",
+          border: "1px solid var(--tag-border)",
+        };
+      }
+    }
+
+    // Past dates with data
     if (hours >= 8) {
       return {
         backgroundColor: "rgba(22,163,74,0.13)",
@@ -136,13 +153,15 @@ export default function AttendanceReportTable({
       };
     }
 
+    // Yellow for 0 < hours < 8
     if (hours > 0) {
       return {
-        backgroundColor: "rgba(217,119,6,0.14)",
+        backgroundColor: "rgba(234,179,8,0.15)",
         color: "var(--tag-warning)",
       };
     }
 
+    // Red/pink for absent (0 hours)
     return {
       backgroundColor: "rgba(239,68,68,0.09)",
       color: "var(--tag-danger)",
@@ -174,16 +193,20 @@ export default function AttendanceReportTable({
           </div>
           <div className="flex items-center gap-3 text-xs" style={{ color: "var(--tag-body)" }}>
             <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#ffffff", border: "1px solid #ccc" }} />
+              Future Days
+            </span>
+            <span className="inline-flex items-center gap-1">
               <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(22,163,74,0.13)" }} />
               Full day (8h+)
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(217,119,6,0.14)" }} />
-              Partial (&lt;8h)
+              <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(234,179,8,0.15)" }} />
+              Partial (0-8h)
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-3 h-3 rounded" style={{ backgroundColor: "rgba(239,68,68,0.09)" }} />
-              Zero hours
+              Absent (0h)
             </span>
           </div>
         </div>
@@ -240,7 +263,7 @@ export default function AttendanceReportTable({
 
                   {matrixData.dayKeys.map((dayKey) => {
                     const hours = row.dayHours[dayKey] || 0;
-                    const cellStyle = getHoursCellStyle(hours);
+                    const cellStyle = getHoursCellStyle(hours, dayKey);
 
                     return (
                       <td

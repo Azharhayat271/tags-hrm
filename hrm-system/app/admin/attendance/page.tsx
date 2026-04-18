@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AttendanceReportTable from "@/components/attendance/AttendanceReportTable";
+import ExportButtons from "@/components/attendance/ExportButtons";
 import { Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ interface SessionRow {
   check_out: string | null;
   auto_closed_at: string | null;
   auto_close_reason: string | null;
+  is_manual_entry?: boolean;
+  manual_added_at?: string;
 }
 
 interface MatrixRow {
@@ -33,6 +36,66 @@ interface MatrixRow {
   completedSessions: number;
   openSessions: number;
   autoClosedSessions: number;
+  manualEntrySessions: number;
+}
+
+/**
+ * Prepare attendance data for export (CSV/Excel)
+ */
+function prepareExportData(
+  matrixRows: MatrixRow[],
+  dayKeys: string[]
+): Record<string, string | number>[] {
+  const rows: Record<string, string | number>[] = [];
+
+  // Add rows for each employee
+  matrixRows.forEach((row) => {
+    const exportRow: Record<string, string | number> = {
+      Employee: row.employeeName,
+      Email: row.employeeEmail,
+    };
+
+    // Add hours for each day
+    dayKeys.forEach((dayKey) => {
+      const date = new Date(dayKey);
+      const dateHeader = `${date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })} (${date.toLocaleDateString("en-US", { weekday: "short" })})`;
+      exportRow[dateHeader] = parseFloat((row.dayHours[dayKey] || 0).toFixed(1));
+    });
+
+    exportRow["Total Hours"] = parseFloat(row.totalCompletedHours.toFixed(1));
+    rows.push(exportRow);
+  });
+
+  // Add daily totals row
+  const dayTotals: Record<string, number> = {};
+  dayKeys.forEach((dayKey) => {
+    dayTotals[dayKey] = matrixRows.reduce(
+      (sum, row) => sum + (row.dayHours[dayKey] || 0),
+      0
+    );
+  });
+
+  const totalsRow: Record<string, string | number> = {
+    Employee: "Daily Total",
+    Email: "",
+  };
+  dayKeys.forEach((dayKey) => {
+    const date = new Date(dayKey);
+    const dateHeader = `${date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} (${date.toLocaleDateString("en-US", { weekday: "short" })})`;
+    totalsRow[dateHeader] = parseFloat((dayTotals[dayKey] || 0).toFixed(1));
+  });
+  totalsRow["Total Hours"] = parseFloat(
+    matrixRows.reduce((sum, row) => sum + row.totalCompletedHours, 0).toFixed(1)
+  );
+  rows.push(totalsRow);
+
+  return rows;
 }
 
 export default async function AdminAttendancePage({
@@ -105,7 +168,7 @@ export default async function AdminAttendancePage({
   if (employeeIds.length > 0) {
     const { data } = await supabase
         .from("attendance_sessions")
-        .select("id, employee_id, check_in, check_out, auto_closed_at, auto_close_reason")
+        .select("id, employee_id, check_in, check_out, auto_closed_at, auto_close_reason, is_manual_entry, manual_added_at")
       .in("employee_id", employeeIds)
       .gte("check_in", startDate.toISOString())
       .lte("check_in", endDate.toISOString())
@@ -136,6 +199,8 @@ export default async function AdminAttendancePage({
           check_out: session.check_out,
           auto_closed_at: session.auto_closed_at,
           auto_close_reason: session.auto_close_reason,
+          is_manual_entry: session.is_manual_entry,
+          manual_added_at: session.manual_added_at,
         })) ?? [],
       };
     })
@@ -166,8 +231,12 @@ export default async function AdminAttendancePage({
     let completedSessions = 0;
     let openSessions = 0;
     let autoClosedSessions = 0;
+    let manualEntrySessions = 0;
 
     employee.attendance_sessions.forEach((session) => {
+      if (session.is_manual_entry) {
+        manualEntrySessions += 1;
+      }
       if (session.auto_closed_at) {
         autoClosedSessions += 1;
       }
@@ -199,8 +268,13 @@ export default async function AdminAttendancePage({
       completedSessions,
       openSessions,
       autoClosedSessions,
+      manualEntrySessions,
     };
   });
+
+  // Prepare export data
+  const exportData = prepareExportData(matrixRows, dayKeys);
+  const exportFilename = `attendance-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}`;
 
   const matrixData = {
     periodStart: startDate.toISOString(),
@@ -220,20 +294,19 @@ export default async function AdminAttendancePage({
             {periodLabel} - All Employees
           </p>
         </div>
-        <button className="btn-ghost flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          Export CSV
-        </button>
+        <ExportButtons data={exportData} filename={exportFilename} />
       </div>
 
-      <div className="card p-6">
-        <AttendanceReportTable 
-          employees={employees}
-          view={view}
-          startDate={startDate}
-          endDate={endDate}
-          matrixData={matrixData}
-        />
+      <div className="card p-6" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+          <AttendanceReportTable 
+            employees={employees}
+            view={view}
+            startDate={startDate}
+            endDate={endDate}
+            matrixData={matrixData}
+          />
+        </div>
       </div>
     </div>
   );

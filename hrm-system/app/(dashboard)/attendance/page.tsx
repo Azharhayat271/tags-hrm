@@ -4,6 +4,7 @@ import CheckInButton from "@/components/attendance/CheckInButton";
 import TodaySummary from "@/components/attendance/TodaySummary";
 import SessionsList from "@/components/attendance/SessionsList";
 import MonthlyCalendar from "@/components/attendance/MonthlyCalendar";
+import ManualHoursForm from "@/components/attendance/ManualHoursForm";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,11 @@ export default async function AttendancePage() {
           </h3>
           <SessionsList sessions={sessions || []} />
         </div>
+      </div>
+
+      {/* Manual Hours Entry */}
+      <div className="card p-6 mb-8">
+        <ManualHoursForm />
       </div>
 
       {/* Monthly Calendar */}

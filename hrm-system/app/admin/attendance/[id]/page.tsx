@@ -11,6 +11,8 @@ interface AttendanceSession {
   check_out: string | null;
   auto_closed_at: string | null;
   auto_close_reason: string | null;
+  is_manual_entry?: boolean;
+  manual_added_at?: string;
 }
 
 export default async function EmployeeAttendanceDetailPage({
@@ -64,7 +66,7 @@ export default async function EmployeeAttendanceDetailPage({
   // Fetch all sessions for the period
   const { data: sessionsData } = await supabase
     .from("attendance_sessions")
-    .select("id, check_in, check_out, auto_closed_at, auto_close_reason")
+    .select("id, check_in, check_out, auto_closed_at, auto_close_reason, is_manual_entry, manual_added_at")
     .eq("employee_id", resolvedParams.id)
     .gte("check_in", startDate.toISOString())
     .lte("check_in", endDate.toISOString())
@@ -129,8 +131,12 @@ export default async function EmployeeAttendanceDetailPage({
   const totalSessions = sessions.length;
   let completedSessions = 0;
   let autoClosedCount = 0;
+  let manualEntryCount = 0;
 
   sessions.forEach(session => {
+    if (session.is_manual_entry) {
+      manualEntryCount += 1;
+    }
     if (session.auto_closed_at) {
       autoClosedCount += 1;
     }
@@ -252,7 +258,7 @@ export default async function EmployeeAttendanceDetailPage({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <div className="card p-4">
           <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
             Total Hours
@@ -276,6 +282,12 @@ export default async function EmployeeAttendanceDetailPage({
             Auto-Closed
           </p>
           <p className="text-2xl font-light">{autoClosedCount}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+            Manual Entries
+          </p>
+          <p className="text-2xl font-light">{manualEntryCount}</p>
         </div>
       </div>
 
@@ -394,26 +406,33 @@ export default async function EmployeeAttendanceDetailPage({
                           backgroundColor: 'var(--tag-bg-warm)'
                         }}
                       >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4" style={{ color: 'var(--tag-orange)' }} />
                             <span className="font-medium text-sm">
-                              Session {daySessions.length - idx}
+                              {session.is_manual_entry ? 'Manual Entry' : `Session ${daySessions.length - idx}`}
                             </span>
                           </div>
-                          {session.auto_closed_at && (
-                            <span className="badge-warning text-xs" title={`Auto-closed: ${session.auto_close_reason}`}>
-                              ⚙️ Auto-Closed
-                            </span>
-                          )}
-                          {!session.check_out && !session.auto_closed_at && (
-                            <span className="badge-warning text-xs">In Progress</span>
-                          )}
-                          {duration && (
-                            <span className="text-sm font-medium" style={{ color: 'var(--tag-orange)' }}>
-                              Duration: {duration.hours}h {duration.minutes}m
-                            </span>
-                          )}
+                          <div className="flex gap-2 items-center">
+                            {session.is_manual_entry && (
+                              <span className="badge text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--tag-warning)', color: 'white' }}>
+                                Manual
+                              </span>
+                            )}
+                            {session.auto_closed_at && (
+                              <span className="badge-warning text-xs" title={`Auto-closed: ${session.auto_close_reason}`}>
+                                ⚙️ Auto-Closed
+                              </span>
+                            )}
+                            {!session.check_out && !session.auto_closed_at && (
+                              <span className="badge-warning text-xs">In Progress</span>
+                            )}
+                            {duration && (
+                              <span className="text-sm font-medium" style={{ color: 'var(--tag-orange)' }}>
+                                Duration: {duration.hours}h {duration.minutes}m
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

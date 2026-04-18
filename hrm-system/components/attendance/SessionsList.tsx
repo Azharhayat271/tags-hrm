@@ -6,6 +6,8 @@ interface Session {
   id: string;
   check_in: string;
   check_out: string | null;
+  is_manual_entry?: boolean;
+  manual_added_at?: string;
 }
 
 interface SessionsListProps {
@@ -46,13 +48,20 @@ export default function SessionsList({ sessions }: SessionsListProps) {
           >
             <div className="flex items-start justify-between mb-2">
               <span className="text-xs font-medium" style={{ color: 'var(--tag-label)' }}>
-                Session {sessions.length - index}
+                {session.is_manual_entry ? 'Manual Entry' : 'Session'} {!session.is_manual_entry && sessions.length - index}
               </span>
-              {checkOut ? (
-                <CheckCircle className="w-4 h-4" style={{ color: 'var(--tag-success)' }} />
-              ) : (
-                <span className="badge-success text-xs">Active</span>
-              )}
+              <div className="flex gap-2 items-center">
+                {session.is_manual_entry && (
+                  <span className="badge text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--tag-warning)', color: 'white' }}>
+                    Manual
+                  </span>
+                )}
+                {checkOut ? (
+                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--tag-success)' }} />
+                ) : (
+                  <span className="badge-success text-xs">Active</span>
+                )}
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-2 text-sm">

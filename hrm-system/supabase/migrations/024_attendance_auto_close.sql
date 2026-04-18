@@ -7,8 +7,10 @@ ADD COLUMN auto_close_reason VARCHAR(255) NULL;
 CREATE INDEX IF NOT EXISTS idx_attendance_sessions_auto_closed_at 
   ON attendance_sessions(auto_closed_at);
 
--- Update the daily_attendance_summary view to include auto-closed sessions
-CREATE OR REPLACE VIEW daily_attendance_summary AS
+-- Drop and recreate the daily_attendance_summary view to include auto-closed sessions
+DROP VIEW IF EXISTS daily_attendance_summary CASCADE;
+
+CREATE VIEW daily_attendance_summary AS
 SELECT 
   employee_id,
   DATE(check_in AT TIME ZONE 'UTC') as date,
@@ -36,3 +38,6 @@ GROUP BY employee_id, DATE(check_in AT TIME ZONE 'UTC');
 
 COMMENT ON COLUMN attendance_sessions.auto_closed_at IS 'Timestamp when session was auto-closed by system';
 COMMENT ON COLUMN attendance_sessions.auto_close_reason IS 'Reason for auto-close (e.g., ''overnight_auto_close_14h_threshold'')';
+
+-- Grant access to the view
+GRANT SELECT ON daily_attendance_summary TO authenticated;

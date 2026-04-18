@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApiCall } from "@/lib/hooks/client";
+import { formatTime } from "@/lib/utils";
 import { LogIn, LogOut, Loader2 } from "lucide-react";
 
 interface CheckInButtonProps {
@@ -50,10 +51,7 @@ export default function CheckInButton({ employeeId, activeSession }: CheckInButt
   };
 
   if (activeSession) {
-    const checkInTime = new Date(activeSession.check_in).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const checkInTime = formatTime(activeSession.check_in);
 
     return (
       <div className="space-y-4">
