@@ -3,7 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiCall } from "@/lib/hooks/client";
-import { Loader2, Calendar } from "lucide-react";
+import { Calendar, CalendarRange } from "lucide-react";
+import {
+  Button,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  FormError,
+  FormSection,
+  FormActions,
+  EmptyState,
+} from "@/components/ui";
 
 interface LeaveType {
   id: string;
@@ -17,7 +28,7 @@ interface ApplyLeaveFormProps {
   holidayDates: string[];
 }
 
-export default function ApplyLeaveForm({ employeeId, leaveTypes, holidayDates }: ApplyLeaveFormProps) {
+export default function ApplyLeaveForm({ leaveTypes, holidayDates }: ApplyLeaveFormProps) {
   const router = useRouter();
   const { callApi } = useApiCall();
   const [loading, setLoading] = useState(false);
@@ -32,15 +43,9 @@ export default function ApplyLeaveForm({ employeeId, leaveTypes, holidayDates }:
 
   const [calculatedDays, setCalculatedDays] = useState(0);
 
-  // Calculate working days
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
-      const days = calculateWorkingDays(
-        formData.start_date,
-        formData.end_date,
-        holidayDates
-      );
-      setCalculatedDays(days);
+      setCalculatedDays(calculateWorkingDays(formData.start_date, formData.end_date, holidayDates));
     } else {
       setCalculatedDays(0);
     }
@@ -52,7 +57,7 @@ export default function ApplyLeaveForm({ employeeId, leaveTypes, holidayDates }:
     setError(null);
 
     if (calculatedDays <= 0) {
-      setError("Please select valid dates");
+      setError("Please select valid dates — at least one working day is required.");
       setLoading(false);
       return;
     }
@@ -80,147 +85,169 @@ export default function ApplyLeaveForm({ employeeId, leaveTypes, holidayDates }:
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   if (leaveTypes.length === 0) {
     return (
-      <div className="card p-6">
-        <div className="text-center py-8">
-          <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
-            No leave types available. Please contact your administrator.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={<CalendarRange className="w-5 h-5" />}
+        title="No leave types configured"
+        description="An administrator needs to set up at least one leave type before you can apply. Please contact HR."
+      />
     );
   }
 
+  const today = new Date().toISOString().split("T")[0];
+  const selectedType = leaveTypes.find((t) => t.id === formData.leave_type_id);
+
   return (
-    <div className="card p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div
-            className="text-sm p-3 rounded"
-            style={{
-              backgroundColor: "var(--tag-danger-bg)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "var(--tag-danger)",
-            }}
+    <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+      <form onSubmit={handleSubmit}>
+        <div className="px-6 pt-1 pb-0 divide-y divide-line-subtle">
+          {error && (
+            <div className="py-5">
+              <FormError>{error}</FormError>
+            </div>
+          )}
+
+          <FormSection
+            eyebrow="Category"
+            title="Type of leave"
+            description="Pick the category that matches your request. Balances are shown on the right."
           >
-            {error}
-          </div>
-        )}
+            <Field label="Leave type" required>
+              {({ id, invalid }) => (
+                <Select
+                  id={id}
+                  name="leave_type_id"
+                  value={formData.leave_type_id}
+                  onChange={handleChange}
+                  required
+                  invalid={invalid}
+                >
+                  <option value="">Select a leave type…</option>
+                  {leaveTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} — {type.days_per_year} days/year
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            {selectedType && (
+              <p className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+                Annual allowance: <span className="text-ink-secondary">{selectedType.days_per_year} days</span>
+              </p>
+            )}
+          </FormSection>
 
-        <div>
-          <label htmlFor="leave_type_id" className="label">
-            Leave Type *
-          </label>
-          <select
-            id="leave_type_id"
-            name="leave_type_id"
-            value={formData.leave_type_id}
-            onChange={handleChange}
-            className="input"
-            required
+          <FormSection
+            eyebrow="Dates"
+            title="Range of absence"
+            description="Select your first and last day. Weekends and public holidays are excluded automatically."
           >
-            <option value="">Select leave type</option>
-            {leaveTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name} ({type.days_per_year} days/year)
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Start date" required>
+                {({ id, invalid }) => (
+                  <Input
+                    id={id}
+                    name="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={handleChange}
+                    min={today}
+                    required
+                    invalid={invalid}
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+              <Field label="End date" required>
+                {({ id, invalid }) => (
+                  <Input
+                    id={id}
+                    name="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={handleChange}
+                    min={formData.start_date || today}
+                    required
+                    invalid={invalid}
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="start_date" className="label">
-              Start Date *
-            </label>
-            <input
-              id="start_date"
-              name="start_date"
-              type="date"
-              value={formData.start_date}
-              onChange={handleChange}
-              className="input"
-              min={new Date().toISOString().split('T')[0]}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="end_date" className="label">
-              End Date *
-            </label>
-            <input
-              id="end_date"
-              name="end_date"
-              type="date"
-              value={formData.end_date}
-              onChange={handleChange}
-              className="input"
-              min={formData.start_date || new Date().toISOString().split('T')[0]}
-              required
-            />
-          </div>
-        </div>
-
-        {calculatedDays > 0 && (
-          <div className="p-4 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.08)' }}>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
-              <div>
-                <p className="text-sm font-normal">Working Days</p>
-                <p className="text-2xl font-light tabular-nums" style={{ color: 'var(--tag-orange)' }}>
-                  {calculatedDays} {calculatedDays === 1 ? 'day' : 'days'}
-                </p>
-                <p className="text-xs mt-1" style={{ color: 'var(--tag-body)' }}>
-                  Excludes weekends and public holidays
-                </p>
+            {/* Calculated days stat */}
+            <div className="flex items-center justify-between gap-4 p-4 rounded-sm bg-surface-sunken border border-line-subtle">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-surface-raised border border-line-subtle">
+                  <Calendar className="w-4 h-4 text-ink-tertiary" strokeWidth={1.75} />
+                </span>
+                <div>
+                  <span className="eyebrow block">Working days</span>
+                  <span className="text-[11px] text-ink-tertiary">Excludes weekends & holidays</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className={`font-mono tabular-nums text-[1.75rem] leading-none font-light tracking-[-0.02em] ${
+                    calculatedDays > 0 ? "text-ink-accent" : "text-ink-quaternary"
+                  }`}
+                >
+                  {calculatedDays}
+                  <span className="text-[11px] text-ink-tertiary font-normal ml-1">
+                    {calculatedDays === 1 ? "day" : "days"}
+                  </span>
+                </div>
               </div>
             </div>
+          </FormSection>
+
+          <FormSection
+            eyebrow="Context"
+            title="Reason"
+            description="Share a short note for your manager. Helpful context speeds up approval, but it's optional."
+          >
+            <Field label="Reason" optional>
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="E.g. Family event, personal time, medical appointment…"
+                />
+              )}
+            </Field>
+          </FormSection>
+        </div>
+
+        <FormActions
+          align="split"
+          className="px-6 py-4 bg-surface-muted border-t-0 mt-0"
+        >
+          <span className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+            Request will be sent to your approver.
+          </span>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={calculatedDays <= 0}
+              loading={loading}
+            >
+              {loading ? "Submitting…" : "Submit request"}
+            </Button>
           </div>
-        )}
-
-        <div>
-          <label htmlFor="reason" className="label">
-            Reason (Optional)
-          </label>
-          <textarea
-            id="reason"
-            name="reason"
-            value={formData.reason}
-            onChange={handleChange}
-            className="input"
-            rows={4}
-            placeholder="Provide a reason for your leave request..."
-          />
-        </div>
-
-        <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--tag-border)" }}>
-          <button
-            type="submit"
-            disabled={loading || calculatedDays <= 0}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Submitting..." : "Submit Request"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="btn-ghost"
-          >
-            Cancel
-          </button>
-        </div>
+        </FormActions>
       </form>
     </div>
   );
@@ -229,23 +256,17 @@ export default function ApplyLeaveForm({ employeeId, leaveTypes, holidayDates }:
 function calculateWorkingDays(startDate: string, endDate: string, holidays: string[]): number {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
   if (start > end) return 0;
-  
+
   let workingDays = 0;
   const current = new Date(start);
-  
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    const dateStr = current.toISOString().split('T')[0];
-    
-    // Count if it's a weekday and not a public holiday
+    const dateStr = current.toISOString().split("T")[0];
     if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateStr)) {
       workingDays++;
     }
-    
     current.setDate(current.getDate() + 1);
   }
-  
   return workingDays;
 }

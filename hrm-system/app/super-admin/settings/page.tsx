@@ -42,10 +42,10 @@ export default async function SettingsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           System Settings
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Configure system-wide settings and policies
         </p>
       </div>
@@ -55,13 +55,13 @@ export default async function SettingsPage() {
         <Link href="/super-admin/settings/leave-types" className="card p-6 hover:shadow-tag-elevated-hover transition-shadow">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-              <Briefcase className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
+              <Briefcase className="w-6 h-6" style={{ color: "var(--accent)" }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
                 Leave Types
               </h3>
-              <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                 Configure available leave types and annual allowances
               </p>
               <div className="flex items-center gap-2">
@@ -75,13 +75,13 @@ export default async function SettingsPage() {
         <Link href="/super-admin/settings/holidays" className="card p-6 hover:shadow-tag-elevated-hover transition-shadow">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-              <Calendar className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
+              <Calendar className="w-6 h-6" style={{ color: "var(--accent)" }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
                 Public Holidays
               </h3>
-              <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                 Manage public holidays calendar
               </p>
               <div className="flex items-center gap-2">
@@ -95,13 +95,13 @@ export default async function SettingsPage() {
         <Link href="/super-admin/settings/designations" className="card p-6 hover:shadow-tag-elevated-hover transition-shadow">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-              <Briefcase className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
+              <Briefcase className="w-6 h-6" style={{ color: "var(--accent)" }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
                 Job Designations
               </h3>
-              <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                 Configure job titles and roles
               </p>
               <div className="flex items-center gap-2">
@@ -115,13 +115,13 @@ export default async function SettingsPage() {
         <Link href="/super-admin/settings/departments" className="card p-6 hover:shadow-tag-elevated-hover transition-shadow">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-              <Briefcase className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
+              <Briefcase className="w-6 h-6" style={{ color: "var(--accent)" }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
                 Departments
               </h3>
-              <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                 Manage company departments
               </p>
               <div className="flex items-center gap-2">
@@ -135,13 +135,13 @@ export default async function SettingsPage() {
         <div className="card p-6" style={{ opacity: 0.6 }}>
           <div className="flex items-start gap-4">
             <div className="p-3 rounded" style={{ backgroundColor: 'rgba(107,114,128,0.1)' }}>
-              <SettingsIcon className="w-6 h-6" style={{ color: 'var(--tag-body)' }} />
+              <SettingsIcon className="w-6 h-6" style={{ color: "var(--text-tertiary)" }} />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
                 Company Settings
               </h3>
-              <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                 Coming in Phase 8
               </p>
             </div>

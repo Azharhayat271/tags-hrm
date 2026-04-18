@@ -21,7 +21,7 @@ export default function TodaySummary({ sessions }: TodaySummaryProps) {
         </h3>
         <div className="text-center py-8">
           <Clock className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No sessions yet
           </p>
         </div>
@@ -56,9 +56,9 @@ export default function TodaySummary({ sessions }: TodaySummaryProps) {
       
       <div className="space-y-4">
         <div className="flex items-start gap-3">
-          <Clock className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
+          <Clock className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+            <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
               Total Hours Worked
             </p>
             <p className="text-3xl font-light tabular-nums">
@@ -67,18 +67,18 @@ export default function TodaySummary({ sessions }: TodaySummaryProps) {
           </div>
         </div>
 
-        <div className="pt-4 border-t space-y-2" style={{ borderColor: 'var(--tag-border)' }}>
+        <div className="pt-4 border-t space-y-2" style={{ borderColor: "var(--border-subtle)" }}>
           <div className="flex justify-between text-sm">
-            <span style={{ color: 'var(--tag-label)' }}>Total Sessions</span>
+            <span style={{ color: "var(--text-secondary)" }}>Total Sessions</span>
             <span className="font-medium">{sessions.length}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span style={{ color: 'var(--tag-label)' }}>Completed</span>
+            <span style={{ color: "var(--text-secondary)" }}>Completed</span>
             <span className="font-medium">{completedSessions}</span>
           </div>
           {activeSessions > 0 && (
             <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--tag-label)' }}>Active</span>
+              <span style={{ color: "var(--text-secondary)" }}>Active</span>
               <span className="badge-success">{activeSessions}</span>
             </div>
           )}

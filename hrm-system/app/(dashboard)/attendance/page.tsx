@@ -25,10 +25,10 @@ export default async function AttendancePage() {
   if (!employee) {
     return (
       <div>
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Attendance
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Employee record not found
         </p>
       </div>
@@ -67,10 +67,10 @@ export default async function AttendancePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Attendance
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Track multiple work sessions per day
         </p>
       </div>
@@ -81,7 +81,7 @@ export default async function AttendancePage() {
           <h3 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
             Current Status
           </h3>
-          <p className="text-sm mb-4" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm mb-4" style={{ color: "var(--text-tertiary)" }}>
             {formatDate(new Date())}
           </p>
           <CheckInButton 

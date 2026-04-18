@@ -31,7 +31,7 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
         </h3>
         <div className="text-center py-12">
           <Award className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No performance reviews yet
           </p>
         </div>
@@ -50,7 +50,7 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
           <div
             key={review.id}
             className="p-4 rounded border"
-            style={{ borderColor: 'var(--tag-border)' }}
+            style={{ borderColor: "var(--border-subtle)" }}
           >
             <div className="flex items-start justify-between mb-3">
               <div>
@@ -60,7 +60,7 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
                     <CheckCircle className="w-4 h-4" style={{ color: 'var(--tag-success)' }} />
                   )}
                 </div>
-                <p className="text-xs" style={{ color: 'var(--tag-label)' }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Reviewed by {review.reviewed_by_profile?.full_name || '—'}
                 </p>
               </div>
@@ -77,7 +77,7 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
                   </span>
                 )}
                 {review.overall_score !== null && (
-                  <p className="text-lg font-light tabular-nums mt-1" style={{ color: 'var(--tag-orange)' }}>
+                  <p className="text-lg font-light tabular-nums mt-1" style={{ color: "var(--accent)" }}>
                     {review.overall_score}%
                   </p>
                 )}
@@ -85,14 +85,14 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
             </div>
 
             {review.manager_notes && (
-              <div className="mb-3 p-3 rounded" style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
+              <div className="mb-3 p-3 rounded" style={{ backgroundColor: "var(--surface-muted)" }}>
                 <div className="flex items-start gap-2 mb-1">
-                  <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                  <p className="text-xs font-normal" style={{ color: 'var(--tag-label)' }}>
+                  <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: "var(--accent)" }} />
+                  <p className="text-xs font-normal" style={{ color: "var(--text-secondary)" }}>
                     Manager Feedback
                   </p>
                 </div>
-                <p className="text-sm ml-6" style={{ color: 'var(--tag-body)' }}>
+                <p className="text-sm ml-6" style={{ color: "var(--text-tertiary)" }}>
                   {review.manager_notes}
                 </p>
               </div>
@@ -101,18 +101,18 @@ export default function ReviewHistory({ reviews }: ReviewHistoryProps) {
             {review.employee_notes && (
               <div className="mb-3 p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.05)' }}>
                 <div className="flex items-start gap-2 mb-1">
-                  <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                  <p className="text-xs font-normal" style={{ color: 'var(--tag-label)' }}>
+                  <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: "var(--accent)" }} />
+                  <p className="text-xs font-normal" style={{ color: "var(--text-secondary)" }}>
                     Your Comments
                   </p>
                 </div>
-                <p className="text-sm ml-6" style={{ color: 'var(--tag-body)' }}>
+                <p className="text-sm ml-6" style={{ color: "var(--text-tertiary)" }}>
                   {review.employee_notes}
                 </p>
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--tag-label)' }}>
+            <div className="flex items-center justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
               <span>Reviewed on {formatDate(review.created_at)}</span>
               {review.acknowledged_at ? (
                 <span className="text-success">Acknowledged {formatDate(review.acknowledged_at)}</span>

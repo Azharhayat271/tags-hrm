@@ -94,20 +94,20 @@ export default function MonthlyCalendar({ attendanceRecords }: MonthlyCalendarPr
       {/* Header with stats */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <CalendarIcon className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+          <CalendarIcon className="w-5 h-5" style={{ color: "var(--accent)" }} />
           <h4 className="text-lg font-light">{monthName}</h4>
         </div>
         <div className="flex items-center gap-6">
           <div className="text-right">
-            <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Working Days</p>
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Working Days</p>
             <p className="text-lg font-light tabular-nums">{workingDays}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Present</p>
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Present</p>
             <p className="text-lg font-light tabular-nums">{presentDays}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Attendance</p>
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Attendance</p>
             <p className="text-lg font-light tabular-nums">{attendancePercentage}%</p>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function MonthlyCalendar({ attendanceRecords }: MonthlyCalendarPr
           <div
             key={day}
             className="text-center text-xs font-normal py-2"
-            style={{ color: 'var(--tag-label)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
             {day}
           </div>
@@ -178,22 +178,22 @@ export default function MonthlyCalendar({ attendanceRecords }: MonthlyCalendarPr
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 mt-6 pt-6 border-t" style={{ borderColor: 'var(--tag-border)' }}>
+      <div className="flex items-center gap-6 mt-6 pt-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(22,163,74,0.1)' }} />
-          <span className="text-xs" style={{ color: 'var(--tag-body)' }}>Present</span>
+          <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>Present</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(239,68,68,0.1)' }} />
-          <span className="text-xs" style={{ color: 'var(--tag-body)' }}>Absent</span>
+          <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>Absent</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(217,119,6,0.1)' }} />
-          <span className="text-xs" style={{ color: 'var(--tag-body)' }}>Incomplete</span>
+          <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>Incomplete</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--tag-bg-warm)' }} />
-          <span className="text-xs" style={{ color: 'var(--tag-body)' }}>Weekend</span>
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: "var(--surface-muted)" }} />
+          <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>Weekend</span>
         </div>
       </div>
     </div>

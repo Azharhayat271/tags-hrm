@@ -111,7 +111,7 @@ export default function SlackMappingTable({ employees }: SlackMappingTableProps)
             <h3 className="text-lg font-light mb-2" style={{ letterSpacing: "-0.22px" }}>
               Auto-Link by Email
             </h3>
-            <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
               Automatically link all employees who use the same email for Slack and HRM.
             </p>
           </div>
@@ -183,7 +183,7 @@ export default function SlackMappingTable({ employees }: SlackMappingTableProps)
               return (
                 <tr key={employee.id} className="table-row">
                   <td className="px-4 py-3">{employee.profiles.full_name}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--tag-body)' }}>
+                  <td className="px-4 py-3 text-sm" style={{ color: "var(--text-tertiary)" }}>
                     {employee.profiles.email}
                   </td>
                   <td className="px-4 py-3">
@@ -259,7 +259,7 @@ export default function SlackMappingTable({ employees }: SlackMappingTableProps)
               {inactiveEmployees.map((employee) => (
                 <tr key={employee.id} className="table-row">
                   <td className="px-4 py-3">{employee.profiles.full_name}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--tag-body)' }}>
+                  <td className="px-4 py-3 text-sm" style={{ color: "var(--text-tertiary)" }}>
                     {employee.profiles.email}
                   </td>
                   <td className="px-4 py-3 font-mono text-sm">

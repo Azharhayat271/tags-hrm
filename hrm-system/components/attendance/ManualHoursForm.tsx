@@ -93,7 +93,7 @@ export default function ManualHoursForm({ onSubmit, isLoading = false }: ManualH
 
   return (
     <div className="p-4 rounded-lg border" style={{ borderColor: "var(--tag-border)", backgroundColor: "var(--tag-bg)" }}>
-      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--tag-body)" }}>
+      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-tertiary)" }}>
         <Clock className="w-4 h-4" />
         Add Manual Hours
       </h3>
@@ -114,7 +114,7 @@ export default function ManualHoursForm({ onSubmit, isLoading = false }: ManualH
         )}
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium" style={{ color: "var(--tag-label)" }}>
+          <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
             Date (Current Month Only)
           </label>
           <input
@@ -131,14 +131,14 @@ export default function ManualHoursForm({ onSubmit, isLoading = false }: ManualH
               color: "var(--tag-body)",
             }}
           />
-          <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
             Select a past date from the current month
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <label className="block text-sm font-medium" style={{ color: "var(--tag-label)" }}>
+            <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
               Check In Time
             </label>
             <input
@@ -156,7 +156,7 @@ export default function ManualHoursForm({ onSubmit, isLoading = false }: ManualH
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium" style={{ color: "var(--tag-label)" }}>
+            <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
               Check Out Time
             </label>
             <input

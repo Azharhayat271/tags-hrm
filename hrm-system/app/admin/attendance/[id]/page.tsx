@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Clock, Calendar } from "lucide-react";
-import Link from "next/link";
+import { Clock, Calendar as CalendarIcon, PencilLine, CircleDashed } from "lucide-react";
 import EmployeeExportButtons from "@/components/attendance/EmployeeExportButtons";
 import {
   computeAttendanceMatrix,
@@ -9,6 +8,17 @@ import {
   type RawHoliday,
   type RawSession,
 } from "@/lib/attendance/aggregate";
+import {
+  Badge,
+  Card,
+  CardHeader,
+  CardBody,
+  CardTitle,
+  EmptyState,
+  PageHeader,
+  StatStrip,
+  StatCell,
+} from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +34,7 @@ export default async function EmployeeAttendanceDetailPage({
   searchParams: Promise<{ start?: string; end?: string }>;
 }) {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -161,118 +168,147 @@ export default async function EmployeeAttendanceDetailPage({
 
   const exportFilename = `attendance-${row.employeeName.replace(/\s+/g, "_")}-${matrix.period.start}-to-${matrix.period.end}`;
 
-  return (
-    <div>
-      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <Link
-            href="/admin/attendance"
-            className="inline-flex items-center gap-2 text-sm mb-3 hover:underline"
-            style={{ color: "var(--tag-orange)" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Attendance
-          </Link>
-          <h1 style={{ fontSize: "1.75rem", lineHeight: 1.1, letterSpacing: "-0.56px" }}>
-            {row.employeeName}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--tag-body)" }}>
-            {row.employeeEmail}
-            {row.departmentName ? ` · ${row.departmentName}` : ""}
-          </p>
-          <p className="text-sm mt-1" style={{ color: "var(--tag-label)" }}>
-            {periodLabel}
-          </p>
-        </div>
-        <EmployeeExportButtons
-          matrix={matrix}
-          row={row}
-          sessions={sessions.map((s) => ({
-            check_in: s.check_in,
-            check_out: s.check_out,
-            is_manual_entry: s.is_manual_entry,
-            auto_closed_at: s.auto_closed_at,
-          }))}
-          periodLabel={periodLabel}
-          filename={exportFilename}
-        />
-      </div>
+  const initials = row.employeeName
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Kpi
+  return (
+    <div className="max-w-[1240px] mx-auto">
+      <PageHeader
+        back={{ href: "/admin/attendance", label: "All employees" }}
+        eyebrow="Attendance · Employee detail"
+        title={
+          <span className="inline-flex items-center gap-4">
+            <span
+              aria-hidden
+              className="inline-flex items-center justify-center w-11 h-11 rounded-md bg-surface-sunken border border-line-subtle text-sm font-medium tracking-wide text-ink-secondary"
+            >
+              {initials}
+            </span>
+            {row.employeeName}
+          </span>
+        }
+        meta={
+          <>
+            <span>{row.employeeEmail}</span>
+            {row.departmentName && (
+              <>
+                <span className="text-ink-quaternary">·</span>
+                <span>{row.departmentName}</span>
+              </>
+            )}
+            <span className="text-ink-quaternary">·</span>
+            <span className="font-mono tabular-nums">{periodLabel}</span>
+          </>
+        }
+        actions={
+          <EmployeeExportButtons
+            matrix={matrix}
+            row={row}
+            sessions={sessions.map((s) => ({
+              check_in: s.check_in,
+              check_out: s.check_out,
+              is_manual_entry: s.is_manual_entry,
+              auto_closed_at: s.auto_closed_at,
+            }))}
+            periodLabel={periodLabel}
+            filename={exportFilename}
+          />
+        }
+      />
+
+      {/* Primary stat strip — one continuous rule-divided band */}
+      <StatStrip className="grid-cols-2 md:grid-cols-4 mb-3 reveal" style={{ animationDelay: "40ms" } as React.CSSProperties}>
+        <StatCell
           label="Total hours"
-          value={`${totals.totalHours.toFixed(1)}h`}
+          value={totals.totalHours.toFixed(1)}
+          unit="h"
           sub={formatHours(totals.totalHours)}
         />
-        <Kpi
+        <StatCell
           label="Regular"
-          value={`${totals.regularHours.toFixed(1)}h`}
-          sub="capped at 8h/day"
+          value={totals.regularHours.toFixed(1)}
+          unit="h"
+          sub="capped at 8h / day"
         />
-        <Kpi
+        <StatCell
           label="Overtime"
-          value={`${totals.overtimeHours.toFixed(1)}h`}
+          value={totals.overtimeHours.toFixed(1)}
+          unit="h"
+          tone={totals.overtimeHours > 0 ? "accent" : "default"}
           sub={
             totals.overtimeHours > 0
-              ? `daily +${totals.dailyOvertimeHours.toFixed(1)} / weekly +${totals.weeklyOvertimeHours.toFixed(1)}`
+              ? `daily +${totals.dailyOvertimeHours.toFixed(1)} · weekly +${totals.weeklyOvertimeHours.toFixed(1)}`
               : "none this period"
           }
-          tint="var(--tag-orange-deep)"
         />
-        <Kpi
+        <StatCell
           label="Attendance"
-          value={`${totals.attendancePercentage}%`}
-          sub={`${totals.daysPresent} full · ${totals.daysPartial} partial · ${totals.daysAbsent} absent`}
-          tint="var(--tag-success)"
+          value={totals.attendancePercentage}
+          unit="%"
+          tone={
+            totals.attendancePercentage >= 90 ? "success" :
+            totals.attendancePercentage >= 70 ? "default" : "warning"
+          }
+          sub={
+            <span className="inline-flex items-center gap-2 font-mono text-[11px]">
+              <span className="text-[var(--success-text)]">{totals.daysPresent} full</span>
+              <span className="text-ink-quaternary">·</span>
+              <span className="text-[var(--warning-text)]">{totals.daysPartial} partial</span>
+              <span className="text-ink-quaternary">·</span>
+              <span className="text-[var(--danger-text)]">{totals.daysAbsent} absent</span>
+            </span>
+          }
         />
-      </div>
+      </StatStrip>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-        <Kpi
+      <StatStrip className="grid-cols-3 mb-10 reveal" style={{ animationDelay: "100ms" } as React.CSSProperties}>
+        <StatCell
           label="Weekend work"
-          value={String(totals.daysWeekendWorked)}
-          sub="days worked Sat/Sun"
+          value={totals.daysWeekendWorked}
+          sub="days on Sat / Sun"
         />
-        <Kpi
+        <StatCell
           label="Auto-closed"
-          value={String(totals.autoClosedSessions)}
+          value={totals.autoClosedSessions}
           sub="sessions closed by system"
+          tone={totals.autoClosedSessions > 0 ? "warning" : "default"}
         />
-        <Kpi
+        <StatCell
           label="Manual entries"
-          value={String(totals.manualEntrySessions)}
-          sub="hours added manually"
+          value={totals.manualEntrySessions}
+          sub="sessions added manually"
+          tone={totals.manualEntrySessions > 0 ? "accent" : "default"}
         />
-      </div>
+      </StatStrip>
 
-      <div className="card p-6 mb-8">
-        <h2 className="text-lg font-light mb-4" style={{ letterSpacing: "-0.22px" }}>
-          Monthly calendar ·{" "}
-          {firstDayKey
-            ? new Date(firstDayKey).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-            : ""}
-        </h2>
-
-        <div className="mb-3 flex items-center gap-3 text-xs flex-wrap" style={{ color: "var(--tag-body)" }}>
-          <Legend color="rgba(22,163,74,0.13)" label="Full day (8h+)" />
-          <Legend color="rgba(234,179,8,0.15)" label="Partial" />
-          <Legend color="rgba(239,68,68,0.09)" label="Absent" />
-          <Legend color="rgba(249,115,22,0.12)" label="Weekend worked" />
-          <Legend color="rgba(148,163,184,0.08)" label="Weekend / holiday" />
-        </div>
-
-        <div
-          className="overflow-x-auto rounded"
-          style={{ border: "1px solid var(--tag-border)" }}
-        >
-          <table className="w-full">
+      {/* Calendar heat-grid — bordered cells, codes, bloomberg feel */}
+      <Card className="mb-10 reveal overflow-hidden" style={{ animationDelay: "160ms" } as React.CSSProperties}>
+        <CardHeader>
+          <CardTitle eyebrow="Calendar">
+            {firstDayKey
+              ? new Date(firstDayKey).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+              : "Period"}
+          </CardTitle>
+          <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[11px] text-ink-tertiary font-mono">
+            <LegendSwatch tone="success" code="F" label="Full" />
+            <LegendSwatch tone="warning" code="P" label="Partial" />
+            <LegendSwatch tone="danger"  code="A" label="Absent" />
+            <LegendSwatch tone="accent"  code="W" label="Weekend work" />
+            <LegendSwatch tone="neutral" code="·" label="Off / holiday" />
+          </div>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr style={{ backgroundColor: "var(--tag-bg-warm)" }}>
+              <tr className="bg-surface-sunken">
                 {weekDays.map((day) => (
                   <th
                     key={day}
-                    className="px-2 py-2 text-center text-xs font-medium"
-                    style={{ color: "var(--tag-label)" }}
+                    className="px-3 py-2.5 text-center text-[10px] font-medium tracking-[0.08em] uppercase text-ink-tertiary border-b border-line-subtle"
                   >
                     {day}
                   </th>
@@ -287,60 +323,18 @@ export default async function EmployeeAttendanceDetailPage({
                       return (
                         <td
                           key={`empty-${weekIdx}-${dayIdx}`}
-                          style={{ backgroundColor: "var(--tag-bg-warm)", height: "72px" }}
+                          className="bg-surface-sunken/60 border-r border-b border-line-subtle last:border-r-0"
+                          style={{ height: "96px" }}
                         />
                       );
                     }
-                    const cell = row.dayHours[dayKey];
-                    const date = new Date(dayKey);
-                    const isHol = cell.isHoliday;
-                    const isWknd = cell.isWeekend;
-                    let bg = "rgba(239,68,68,0.09)";
-                    let fg = "var(--tag-danger)";
-                    if (isHol) {
-                      bg = "rgba(148,163,184,0.08)";
-                      fg = "var(--tag-body)";
-                    } else if (isWknd) {
-                      bg = cell.total > 0 ? "rgba(249,115,22,0.12)" : "rgba(148,163,184,0.06)";
-                      fg = cell.total > 0 ? "var(--tag-orange-deep)" : "var(--tag-body)";
-                    } else if (cell.total >= 8) {
-                      bg = "rgba(22,163,74,0.13)";
-                      fg = "var(--tag-success)";
-                    } else if (cell.total > 0) {
-                      bg = "rgba(234,179,8,0.15)";
-                      fg = "var(--tag-warning)";
-                    }
                     return (
-                      <td
+                      <DayCell
                         key={dayKey}
-                        className="align-top px-2 py-2 border"
-                        style={{
-                          borderColor: "var(--tag-border)",
-                          backgroundColor: bg,
-                          minHeight: "72px",
-                        }}
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-medium" style={{ color: fg }}>
-                              {date.getDate()}
-                            </span>
-                          </div>
-                          <div className="text-sm tabular-nums" style={{ color: fg }}>
-                            {cell.total > 0 ? `${cell.total.toFixed(1)}h` : isHol ? "" : isWknd ? "" : "—"}
-                          </div>
-                          {cell.overtime > 0 && (
-                            <div className="text-[10px] tabular-nums" style={{ color: "var(--tag-orange-deep)" }}>
-                              +{cell.overtime.toFixed(1)} OT
-                            </div>
-                          )}
-                          {isHol && (
-                            <div className="text-[9px]" style={{ color: "var(--tag-body)" }}>
-                              {cell.holidayName}
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                        dayKey={dayKey}
+                        cell={row.dayHours[dayKey]}
+                        isLastCol={dayIdx === 6}
+                      />
                     );
                   })}
                 </tr>
@@ -348,134 +342,243 @@ export default async function EmployeeAttendanceDetailPage({
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-light" style={{ letterSpacing: "-0.22px" }}>
-          Daily sessions
-        </h2>
-        {Object.keys(sessionsByDate).length === 0 ? (
-          <div className="card p-12 text-center">
-            <p style={{ color: "var(--tag-body)" }}>
-              No attendance sessions found for this period
-            </p>
+      {/* Daily sessions — ledger-style */}
+      <section className="reveal" style={{ animationDelay: "220ms" } as React.CSSProperties}>
+        <div className="flex items-end justify-between mb-4">
+          <div>
+            <span className="eyebrow block mb-1">Activity</span>
+            <h2 className="text-[1.375rem] font-light tracking-[-0.015em]">Daily sessions</h2>
           </div>
-        ) : (
-          Object.entries(sessionsByDate).map(([date, daySessions]) => {
-            let totalMs = 0;
-            daySessions.forEach((s) => {
-              if (s.check_out) totalMs += new Date(s.check_out).getTime() - new Date(s.check_in).getTime();
-            });
-            const hours = Math.floor(totalMs / 3600000);
-            const minutes = Math.floor((totalMs % 3600000) / 60000);
+          <span className="text-xs text-ink-tertiary font-mono tabular-nums">
+            {sessions.length} session{sessions.length !== 1 ? "s" : ""}
+          </span>
+        </div>
 
-            return (
-              <div key={date} className="card p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-base font-medium">{formatLongDate(date)}</h3>
-                    <p className="text-sm" style={{ color: "var(--tag-body)" }}>
-                      {daySessions.length} session{daySessions.length !== 1 ? "s" : ""} · Total{" "}
-                      {hours}h {minutes}m
-                    </p>
-                  </div>
-                  <Calendar className="w-5 h-5" style={{ color: "var(--tag-orange)" }} />
-                </div>
-                <div className="space-y-2">
-                  {daySessions.map((session, idx) => {
-                    const duration = calculateDuration(session.check_in, session.check_out);
-                    return (
-                      <div
-                        key={session.id}
-                        className="p-3 rounded border flex items-center gap-3 flex-wrap"
-                        style={{
-                          borderColor: "var(--tag-border)",
-                          backgroundColor: "var(--tag-bg-warm)",
-                        }}
-                      >
-                        <Clock className="w-4 h-4" style={{ color: "var(--tag-orange)" }} />
-                        <span className="text-sm font-medium">
-                          {session.is_manual_entry ? "Manual entry" : `Session ${daySessions.length - idx}`}
-                        </span>
-                        <span className="text-sm" style={{ color: "var(--tag-body)" }}>
-                          {formatTime(session.check_in)} →{" "}
-                          {session.check_out ? formatTime(session.check_out) : "—"}
-                        </span>
-                        <div className="ml-auto flex items-center gap-2">
-                          {session.is_manual_entry && (
-                            <span className="badge badge-orange">Manual</span>
-                          )}
-                          {session.auto_closed_at && (
-                            <span
-                              className="badge"
-                              style={{
-                                backgroundColor: "rgba(100,116,139,0.1)",
-                                color: "var(--tag-label)",
-                              }}
-                              title={`Auto-closed: ${session.auto_close_reason ?? ""}`}
-                            >
-                              ⚙ Auto
-                            </span>
-                          )}
-                          {!session.check_out && !session.auto_closed_at && (
-                            <span className="badge badge-warning">In progress</span>
-                          )}
-                          {duration && (
-                            <span
-                              className="text-sm tabular-nums"
-                              style={{ color: "var(--tag-orange)" }}
-                            >
-                              {duration.hours}h {duration.minutes}m
-                            </span>
-                          )}
+        {Object.keys(sessionsByDate).length === 0 ? (
+          <EmptyState
+            icon={<CalendarIcon className="w-5 h-5" />}
+            title="No sessions in this period"
+            description="The employee did not check in during the selected date range. Try adjusting the period or confirm the employee's schedule."
+          />
+        ) : (
+          <div className="space-y-3">
+            {Object.entries(sessionsByDate).map(([date, daySessions]) => {
+              let totalMs = 0;
+              daySessions.forEach((s) => {
+                if (s.check_out) totalMs += new Date(s.check_out).getTime() - new Date(s.check_in).getTime();
+              });
+              const hours = Math.floor(totalMs / 3600000);
+              const minutes = Math.floor((totalMs % 3600000) / 60000);
+
+              return (
+                <Card key={date}>
+                  <div className="px-5 py-3.5 border-b border-line-subtle flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 flex items-center justify-center rounded-sm bg-surface-sunken border border-line-subtle">
+                        <CalendarIcon className="w-4 h-4 text-ink-tertiary" />
+                      </div>
+                      <div>
+                        <div className="text-[15px] text-ink-primary leading-tight">{formatLongDate(date)}</div>
+                        <div className="text-xs text-ink-tertiary mt-0.5">
+                          {daySessions.length} session{daySessions.length !== 1 ? "s" : ""}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="eyebrow">Day total</span>
+                      <span className="font-mono tabular-nums text-sm text-ink-primary">
+                        {hours}h {String(minutes).padStart(2, "0")}m
+                      </span>
+                    </div>
+                  </div>
+                  <ul className="divide-y divide-line-subtle">
+                    {daySessions.map((session, idx) => {
+                      const duration = calculateDuration(session.check_in, session.check_out);
+                      return (
+                        <li
+                          key={session.id}
+                          className="px-5 py-3 flex items-center gap-4 flex-wrap hover:bg-surface-muted transition-colors duration-fast"
+                        >
+                          <span className="text-[10px] font-mono text-ink-quaternary w-6 tabular-nums">
+                            {String(daySessions.length - idx).padStart(2, "0")}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-ink-tertiary">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span className="font-mono tabular-nums text-ink-primary">
+                              {formatTime(session.check_in)}
+                            </span>
+                            <span className="text-ink-quaternary">→</span>
+                            <span className="font-mono tabular-nums text-ink-primary">
+                              {session.check_out ? formatTime(session.check_out) : "—"}
+                            </span>
+                          </span>
+                          <div className="ml-auto flex items-center gap-2">
+                            {session.is_manual_entry && (
+                              <Badge variant="accent" size="sm" icon={<PencilLine className="w-3 h-3" />}>
+                                Manual
+                              </Badge>
+                            )}
+                            {session.auto_closed_at && (
+                              <Badge
+                                variant="warning"
+                                size="sm"
+                                icon={<CircleDashed className="w-3 h-3" />}
+                                title={`Auto-closed: ${session.auto_close_reason ?? ""}`}
+                              >
+                                Auto-closed
+                              </Badge>
+                            )}
+                            {!session.check_out && !session.auto_closed_at && (
+                              <Badge variant="info" size="sm" dot>
+                                In progress
+                              </Badge>
+                            )}
+                            {duration && (
+                              <span className="font-mono tabular-nums text-sm text-ink-primary min-w-[64px] text-right">
+                                {duration.hours}h {String(duration.minutes).padStart(2, "0")}m
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* --- DayCell: a single calendar cell rendered with border + code + hours --- */
+function DayCell({
+  dayKey,
+  cell,
+  isLastCol,
+}: {
+  dayKey: string;
+  cell: {
+    total: number;
+    overtime: number;
+    isWeekend: boolean;
+    isHoliday: boolean;
+    holidayName: string | null;
+  };
+  isLastCol: boolean;
+}) {
+  const date = new Date(dayKey);
+  const today = new Date();
+  const isToday =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+
+  type CellTone = "success" | "warning" | "danger" | "accent" | "neutral";
+  let tone: CellTone = "danger";
+  let code = "A";
+
+  if (cell.isHoliday) {
+    tone = "neutral";
+    code = "·";
+  } else if (cell.isWeekend) {
+    tone = cell.total > 0 ? "accent" : "neutral";
+    code = cell.total > 0 ? "W" : "·";
+  } else if (cell.total >= 8) {
+    tone = "success";
+    code = "F";
+  } else if (cell.total > 0) {
+    tone = "warning";
+    code = "P";
+  }
+
+  const toneBg: Record<CellTone, string> = {
+    success: "bg-[var(--success-tint)]",
+    warning: "bg-[var(--warning-tint)]",
+    danger:  "bg-[var(--danger-tint)]",
+    accent:  "bg-[var(--accent-tint)]",
+    neutral: "bg-surface-sunken",
+  };
+  const toneCode: Record<CellTone, string> = {
+    success: "text-[var(--success-text)]",
+    warning: "text-[var(--warning-text)]",
+    danger:  "text-[var(--danger-text)]",
+    accent:  "text-[var(--accent-deep)]",
+    neutral: "text-ink-quaternary",
+  };
+
+  return (
+    <td
+      className={`align-top p-0 ${isLastCol ? "" : "border-r"} border-b border-line-subtle`}
+      style={{ height: "96px", width: "14.2857%" }}
+    >
+      <div className={`h-full w-full px-2.5 py-2 flex flex-col relative ${toneBg[tone]}`}>
+        <div className="flex items-center justify-between">
+          <span
+            className={`text-[11px] font-mono tabular-nums ${
+              isToday ? "bg-accent text-white px-1.5 py-0.5 rounded-xs" : "text-ink-secondary"
+            }`}
+          >
+            {String(date.getDate()).padStart(2, "0")}
+          </span>
+          <span className={`text-[10px] font-mono font-medium ${toneCode[tone]}`}>{code}</span>
+        </div>
+        <div className="mt-auto flex items-end justify-between">
+          {cell.total > 0 ? (
+            <span className={`font-mono tabular-nums text-[13px] ${toneCode[tone]}`}>
+              {cell.total.toFixed(1)}
+              <span className="text-[10px] opacity-70">h</span>
+            </span>
+          ) : (
+            <span className="text-[10px] text-ink-quaternary">
+              {cell.isHoliday ? "Holiday" : cell.isWeekend ? "Off" : "—"}
+            </span>
+          )}
+          {cell.overtime > 0 && (
+            <span className="text-[9px] font-mono tabular-nums text-[var(--accent-deep)]">
+              +{cell.overtime.toFixed(1)}
+            </span>
+          )}
+        </div>
+        {cell.isHoliday && cell.holidayName && (
+          <div className="absolute bottom-1 left-2.5 right-2.5 text-[9px] text-ink-quaternary truncate">
+            {cell.holidayName}
+          </div>
         )}
       </div>
-    </div>
+    </td>
   );
 }
 
-function Kpi({
+function LegendSwatch({
+  tone,
+  code,
   label,
-  value,
-  sub,
-  tint,
 }: {
+  tone: "success" | "warning" | "danger" | "accent" | "neutral";
+  code: string;
   label: string;
-  value: string;
-  sub: string;
-  tint?: string;
 }) {
-  return (
-    <div className="card p-3">
-      <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--tag-label)" }}>
-        {label}
-      </p>
-      <p className="text-xl tabular-nums mt-1" style={{ color: tint ?? "var(--tag-heading)" }}>
-        {value}
-      </p>
-      <p className="text-[11px] mt-0.5" style={{ color: "var(--tag-body)" }}>
-        {sub}
-      </p>
-    </div>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
+  const toneClasses: Record<typeof tone, string> = {
+    success: "bg-[var(--success-tint)] text-[var(--success-text)] border-[var(--success-border)]",
+    warning: "bg-[var(--warning-tint)] text-[var(--warning-text)] border-[var(--warning-border)]",
+    danger:  "bg-[var(--danger-tint)] text-[var(--danger-text)] border-[var(--danger-border)]",
+    accent:  "bg-[var(--accent-tint)] text-[var(--accent-deep)] border-[var(--accent-wash)]",
+    neutral: "bg-surface-sunken text-ink-tertiary border-line-subtle",
+  };
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
-        className="w-3 h-3 rounded"
-        style={{ backgroundColor: color, border: "1px solid var(--tag-border)" }}
-      />
-      {label}
+        className={`inline-flex items-center justify-center w-4 h-4 rounded-xs border text-[9px] font-semibold ${toneClasses[tone]}`}
+      >
+        {code}
+      </span>
+      <span>{label}</span>
     </span>
   );
 }
+

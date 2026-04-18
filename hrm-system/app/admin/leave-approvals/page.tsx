@@ -44,10 +44,10 @@ export default async function LeaveApprovalsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Leave Approvals
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Review and approve employee leave requests
         </p>
       </div>

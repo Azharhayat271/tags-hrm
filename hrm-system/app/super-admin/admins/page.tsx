@@ -46,10 +46,10 @@ export default async function AdminsPage() {
     <div>
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+          <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
             Admin Management
           </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
             Manage admin accounts and their permissions
           </p>
         </div>
@@ -63,9 +63,9 @@ export default async function AdminsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="card p-6">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+            <Shield className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Total Admins
               </p>
               <p className="text-2xl font-light tabular-nums">
@@ -79,7 +79,7 @@ export default async function AdminsPage() {
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5" style={{ color: 'var(--tag-amber)' }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Super Admins
               </p>
               <p className="text-2xl font-light tabular-nums">
@@ -93,7 +93,7 @@ export default async function AdminsPage() {
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5" style={{ color: 'var(--tag-success)' }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Total Users
               </p>
               <p className="text-2xl font-light tabular-nums">

@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LoadingProvider } from "@/lib/hooks";
 import Loader from "@/components/layout/Loader";
 import { RouteChangeLoaderProvider } from "@/components/layout/RouteChangeLoaderProvider";
+import { ToastProvider } from "@/components/ui";
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  weight: ["400", "500"],
+});
 
 export const metadata: Metadata = {
   title: "TAG Solutions HRM",
@@ -15,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`h-full antialiased ${jetbrainsMono.variable}`}>
       <body 
         className="min-h-full flex flex-col"
         style={{
@@ -25,9 +34,11 @@ export default function RootLayout({
         }}
       >
         <LoadingProvider>
-          <RouteChangeLoaderProvider />
-          <Loader />
-          {children}
+          <ToastProvider>
+            <RouteChangeLoaderProvider />
+            <Loader />
+            {children}
+          </ToastProvider>
         </LoadingProvider>
       </body>
     </html>

@@ -30,10 +30,10 @@ export default async function DesignationsPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+          <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
             Job Designations
           </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
             Configure job titles used when creating employees
           </p>
         </div>

@@ -16,7 +16,7 @@ export default function PDFViewer({ pdfUrl }: PDFViewerProps) {
           <iframe
             src={pdfUrl}
             className="w-full h-full rounded border"
-            style={{ borderColor: 'var(--tag-border)' }}
+            style={{ borderColor: "var(--border-subtle)" }}
             title="Salary Slip PDF"
           />
         </div>

@@ -3,8 +3,19 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiCall } from "@/lib/hooks/client";
-import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import {
+  Button,
+  Field,
+  Input,
+  PasswordInput,
+  Select,
+  FormError,
+  FormSection,
+  FormActions,
+  Skeleton,
+  useToast,
+} from "@/components/ui";
 
 interface Manager {
   id: string;
@@ -30,6 +41,8 @@ interface NewEmployeeFormProps {
 export default function NewEmployeeForm({ managers }: NewEmployeeFormProps) {
   const router = useRouter();
   const { callApi } = useApiCall();
+  const toast = useToast();
+
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,56 +62,38 @@ export default function NewEmployeeForm({ managers }: NewEmployeeFormProps) {
   });
 
   useEffect(() => {
-    console.log("NewEmployeeForm mounted, starting data fetch...");
-    
-    let timeoutId: NodeJS.Timeout;
     let isMounted = true;
-    
-    const fetchData = async () => {
-      try {
-        console.log("Fetching designations and departments...");
-        const [designationsRes, departmentsRes] = await Promise.all([
-          callApi("/api/settings/designations", { method: "GET" }),
-          callApi("/api/settings/departments", { method: "GET" }),
-        ]);
-
-        console.log("Designations Response:", designationsRes);
-        console.log("Departments Response:", departmentsRes);
-
-        if (designationsRes.error) throw new Error(designationsRes.error);
-        if (departmentsRes.error) throw new Error(departmentsRes.error);
-
-        if (isMounted) {
-          setDesignations(designationsRes.data || []);
-          setDepartments(departmentsRes.data || []);
-          setFetchingData(false);
-          clearTimeout(timeoutId); // Clear timeout on success
-          console.log("Successfully loaded designations and departments");
-        }
-      } catch (err: any) {
-        console.error("Error fetching:", err);
-        if (isMounted) {
-          setError(err.message || "Failed to load designations and departments");
-          setFetchingData(false);
-          clearTimeout(timeoutId); // Clear timeout on error
-        }
-      }
-    };
-
-    // Set timeout before starting fetch
-    timeoutId = setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (isMounted) {
-        console.error("Data fetch timeout - still loading after 20 seconds");
         setFetchingData(false);
         setError("Failed to load form data. Please refresh the page.");
       }
     }, 20000);
 
-    fetchData();
+    (async () => {
+      try {
+        const [designationsRes, departmentsRes] = await Promise.all([
+          callApi("/api/settings/designations", { method: "GET" }),
+          callApi("/api/settings/departments", { method: "GET" }),
+        ]);
+        if (designationsRes.error) throw new Error(designationsRes.error);
+        if (departmentsRes.error) throw new Error(departmentsRes.error);
+        if (!isMounted) return;
+        setDesignations(designationsRes.data || []);
+        setDepartments(departmentsRes.data || []);
+        setFetchingData(false);
+        clearTimeout(timeout);
+      } catch (err: any) {
+        if (!isMounted) return;
+        setError(err.message || "Failed to load designations and departments");
+        setFetchingData(false);
+        clearTimeout(timeout);
+      }
+    })();
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
+      clearTimeout(timeout);
     };
   }, [callApi]);
 
@@ -123,35 +118,36 @@ export default function NewEmployeeForm({ managers }: NewEmployeeFormProps) {
         },
       });
 
-      if (apiError) {
-        throw new Error(apiError);
-      }
+      if (apiError) throw new Error(apiError);
 
-      // Success - redirect to employees list
+      toast.success("Employee created", `${formData.full_name} has been added to the roster.`);
       router.push("/admin/employees");
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Failed to create employee");
+      toast.error("Could not create employee", err.message);
       setLoading(false);
     }
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   if (fetchingData) {
     return (
-      <div className="card p-6">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Loading designations and departments...</p>
+      <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 p-8">
+        <div className="space-y-8">
+          <Skeleton height={14} width={120} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-1.5">
+                <Skeleton height={10} width={80} />
+                <Skeleton height={36} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -159,219 +155,189 @@ export default function NewEmployeeForm({ managers }: NewEmployeeFormProps) {
   }
 
   return (
-    <div className="card p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+      <form onSubmit={handleSubmit}>
         {error && (
-          <div
-            className="text-sm p-3 rounded"
-            style={{
-              backgroundColor: "var(--tag-danger-bg)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "var(--tag-danger)",
-            }}
-          >
-            {error}
+          <div className="px-6 pt-5">
+            <FormError>{error}</FormError>
           </div>
         )}
 
-        {/* Personal Information */}
-        <div>
-          <h3 className="text-lg font-light mb-4" style={{ letterSpacing: "-0.22px" }}>
-            Personal Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="full_name" className="label">
-                Full Name *
-              </label>
-              <input
-                id="full_name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleChange}
-                className="input"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="label">
-                Email *
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="label">
-                Phone
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleChange}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="label">
-                Temporary Password *
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="input"
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Employment Information */}
-        <div>
-          <h3 className="text-lg font-light mb-4" style={{ letterSpacing: "-0.22px" }}>
-            Employment Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="designation_id" className="label">
-                Designation *
-              </label>
-              {fetchingData ? (
-                <div className="input flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-              ) : (
-                <select
-                  id="designation_id"
-                  name="designation_id"
-                  value={formData.designation_id}
-                  onChange={handleChange}
-                  className="input"
-                  required
-                >
-                  <option value="">Select a designation</option>
-                  {designations.map((des) => (
-                    <option key={des.id} value={des.id}>
-                      {des.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="department_id" className="label">
-                Department *
-              </label>
-              {fetchingData ? (
-                <div className="input flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-              ) : (
-                <select
-                  id="department_id"
-                  name="department_id"
-                  value={formData.department_id}
-                  onChange={handleChange}
-                  className="input"
-                  required
-                >
-                  <option value="">Select a department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="employment_type" className="label">
-                Employment Type *
-              </label>
-              <select
-                id="employment_type"
-                name="employment_type"
-                value={formData.employment_type}
-                onChange={handleChange}
-                className="input"
-                required
-              >
-                <option value="full_time">Full Time</option>
-                <option value="part_time">Part Time</option>
-                <option value="contract">Contract</option>
-                <option value="intern">Intern</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="joining_date" className="label">
-                Joining Date
-              </label>
-              <input
-                id="joining_date"
-                name="joining_date"
-                type="date"
-                value={formData.joining_date}
-                onChange={handleChange}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="reports_to" className="label">
-                Reports To
-              </label>
-              <select
-                id="reports_to"
-                name="reports_to"
-                value={formData.reports_to}
-                onChange={handleChange}
-                className="input"
-              >
-                <option value="">Select Manager</option>
-                {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.profiles?.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--tag-border)" }}>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        <div className="px-6 divide-y divide-line-subtle">
+          <FormSection
+            eyebrow="01 · Person"
+            title="Personal information"
+            description="Basic details used for login, communication, and payroll."
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Creating..." : "Create Employee"}
-          </button>
-          <Link href="/admin/employees" className="btn-ghost">
-            <ArrowLeft className="w-4 h-4 mr-2 inline" />
-            Cancel
-          </Link>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Full name" required>
+                {({ id, invalid }) => (
+                  <Input
+                    id={id}
+                    name="full_name"
+                    type="text"
+                    value={formData.full_name}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                    placeholder="Jane Doe"
+                  />
+                )}
+              </Field>
+              <Field label="Work email" required>
+                {({ id, invalid }) => (
+                  <Input
+                    id={id}
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                    placeholder="jane@tagsolutions.com"
+                  />
+                )}
+              </Field>
+              <Field label="Phone" optional>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="+92 300 1234567"
+                  />
+                )}
+              </Field>
+              <Field
+                label="Temporary password"
+                required
+                hint="Must be at least 6 characters. The user can change this after first sign-in."
+              >
+                {({ id, invalid }) => (
+                  <PasswordInput
+                    id={id}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    minLength={6}
+                    invalid={invalid}
+                    autoComplete="new-password"
+                  />
+                )}
+              </Field>
+            </div>
+          </FormSection>
+
+          <FormSection
+            eyebrow="02 · Role"
+            title="Employment details"
+            description="Where this person fits in the organization and when they joined."
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Designation" required>
+                {({ id, invalid }) => (
+                  <Select
+                    id={id}
+                    name="designation_id"
+                    value={formData.designation_id}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                  >
+                    <option value="">Select a designation…</option>
+                    {designations.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Department" required>
+                {({ id, invalid }) => (
+                  <Select
+                    id={id}
+                    name="department_id"
+                    value={formData.department_id}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                  >
+                    <option value="">Select a department…</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Employment type" required>
+                {({ id, invalid }) => (
+                  <Select
+                    id={id}
+                    name="employment_type"
+                    value={formData.employment_type}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                  >
+                    <option value="full_time">Full time</option>
+                    <option value="part_time">Part time</option>
+                    <option value="contract">Contract</option>
+                    <option value="intern">Intern</option>
+                  </Select>
+                )}
+              </Field>
+              <Field label="Joining date" optional>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    name="joining_date"
+                    type="date"
+                    value={formData.joining_date}
+                    onChange={handleChange}
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+              <Field label="Reports to" optional>
+                {({ id }) => (
+                  <Select
+                    id={id}
+                    name="reports_to"
+                    value={formData.reports_to}
+                    onChange={handleChange}
+                  >
+                    <option value="">No manager</option>
+                    {managers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.profiles?.full_name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            </div>
+          </FormSection>
         </div>
+
+        <FormActions align="split" className="px-6 py-4 bg-surface-muted mt-0 border-t-0">
+          <span className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+            A temporary password will be emailed to the user.
+          </span>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/employees">
+              <Button type="button" variant="ghost">Cancel</Button>
+            </Link>
+            <Button type="submit" loading={loading}>
+              {loading ? "Creating…" : "Create employee"}
+            </Button>
+          </div>
+        </FormActions>
       </form>
     </div>
   );

@@ -76,7 +76,7 @@ export default function AttendanceQuickActions() {
     return (
       <div className="card p-6 mb-6">
         <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--tag-orange)' }} />
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--accent)" }} />
         </div>
       </div>
     );
@@ -92,11 +92,11 @@ export default function AttendanceQuickActions() {
           <h3 className="text-lg font-light mb-1" style={{ letterSpacing: "-0.22px" }}>
             Quick Attendance (Backup)
           </h3>
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Use this if Slack commands are not working
           </p>
         </div>
-        <Clock className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
+        <Clock className="w-6 h-6" style={{ color: "var(--accent)" }} />
       </div>
 
       <div className="flex items-center gap-4">
@@ -122,7 +122,7 @@ export default function AttendanceQuickActions() {
           <>
             <div className="flex items-center gap-2 text-sm">
               <span className="badge badge-success">Checked In</span>
-              <span style={{ color: 'var(--tag-body)' }}>
+              <span style={{ color: "var(--text-tertiary)" }}>
                 at {new Date(todayAttendance.check_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -148,13 +148,13 @@ export default function AttendanceQuickActions() {
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="badge badge-success">Checked In</span>
-              <span style={{ color: 'var(--tag-body)' }}>
+              <span style={{ color: "var(--text-tertiary)" }}>
                 {new Date(todayAttendance.check_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="badge badge-success">Checked Out</span>
-              <span style={{ color: 'var(--tag-body)' }}>
+              <span style={{ color: "var(--text-tertiary)" }}>
                 {new Date(todayAttendance.check_out).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>

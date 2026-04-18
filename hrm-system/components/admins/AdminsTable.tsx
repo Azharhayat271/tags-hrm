@@ -51,7 +51,7 @@ export default function AdminsTable({ admins }: AdminsTableProps) {
     return (
       <div className="card p-12 text-center">
         <Shield className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-        <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
           No admins found
         </p>
       </div>
@@ -62,24 +62,24 @@ export default function AdminsTable({ admins }: AdminsTableProps) {
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
+          <thead style={{ backgroundColor: "var(--surface-muted)" }}>
             <tr>
-              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Name
               </th>
-              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Email
               </th>
-              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Phone
               </th>
-              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Role
               </th>
-              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-left px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Added
               </th>
-              <th className="text-right px-6 py-3 text-xs uppercase tracking-wider" style={{ color: 'var(--tag-label)' }}>
+              <th className="text-right px-6 py-3 text-xs uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
                 Actions
               </th>
             </tr>
@@ -89,20 +89,20 @@ export default function AdminsTable({ admins }: AdminsTableProps) {
               <tr
                 key={admin.id}
                 className="border-t hover:bg-opacity-50 transition-colors"
-                style={{ borderColor: 'var(--tag-border)' }}
+                style={{ borderColor: "var(--border-subtle)" }}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
-                      <Shield className="w-4 h-4" style={{ color: 'var(--tag-orange)' }} />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--surface-muted)" }}>
+                      <Shield className="w-4 h-4" style={{ color: "var(--accent)" }} />
                     </div>
                     <span className="text-sm font-normal">{admin.full_name}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm" style={{ color: 'var(--tag-body)' }}>
+                <td className="px-6 py-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
                   {admin.email}
                 </td>
-                <td className="px-6 py-4 text-sm" style={{ color: 'var(--tag-body)' }}>
+                <td className="px-6 py-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
                   {admin.phone || '—'}
                 </td>
                 <td className="px-6 py-4">
@@ -114,7 +114,7 @@ export default function AdminsTable({ admins }: AdminsTableProps) {
                     {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm tabular-nums" style={{ color: 'var(--tag-body)' }}>
+                <td className="px-6 py-4 text-sm tabular-nums" style={{ color: "var(--text-tertiary)" }}>
                   {formatDate(admin.created_at)}
                 </td>
                 <td className="px-6 py-4 text-right">

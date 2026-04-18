@@ -58,7 +58,7 @@ export default function EmployeeSearch({
     <div className="card p-6 mb-6">
       <div className="flex items-center gap-4 mb-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--tag-body)' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
           <input
             type="text"
             value={search}
@@ -91,9 +91,9 @@ export default function EmployeeSearch({
       </div>
 
       {showFilters && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'var(--tag-border)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: "var(--border-subtle)" }}>
           <div>
-            <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+            <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
               Status
             </label>
             <select
@@ -114,7 +114,7 @@ export default function EmployeeSearch({
           </div>
 
           <div>
-            <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+            <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
               Department
             </label>
             <select

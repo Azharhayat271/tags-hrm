@@ -103,11 +103,11 @@ function Item({
     <button
       onClick={onClick}
       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
-      style={{ color: "var(--tag-heading)" }}
+      style={{ color: "var(--text-primary)" }}
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--tag-bg-warm)")}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
-      <Icon className="w-4 h-4" style={{ color: "var(--tag-orange)" }} />
+      <Icon className="w-4 h-4" style={{ color: "var(--accent)" }} />
       {label}
     </button>
   );

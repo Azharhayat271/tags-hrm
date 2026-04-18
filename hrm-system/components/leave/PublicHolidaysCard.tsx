@@ -24,7 +24,7 @@ export default function PublicHolidaysCard({ holidays }: PublicHolidaysCardProps
         <Link 
           href="/leave/holidays" 
           className="text-xs hover:underline"
-          style={{ color: 'var(--tag-orange)' }}
+          style={{ color: "var(--accent)" }}
         >
           View All
         </Link>
@@ -33,7 +33,7 @@ export default function PublicHolidaysCard({ holidays }: PublicHolidaysCardProps
       {holidays.length === 0 ? (
         <div className="text-center py-8">
           <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No upcoming holidays
           </p>
         </div>
@@ -43,12 +43,12 @@ export default function PublicHolidaysCard({ holidays }: PublicHolidaysCardProps
             <div
               key={holiday.id}
               className="flex items-start gap-3 p-3 rounded"
-              style={{ backgroundColor: 'var(--tag-bg-warm)' }}
+              style={{ backgroundColor: "var(--surface-muted)" }}
             >
-              <Calendar className="w-4 h-4 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
+              <Calendar className="w-4 h-4 mt-0.5" style={{ color: "var(--accent)" }} />
               <div className="flex-1">
                 <p className="text-sm font-normal">{holiday.name}</p>
-                <p className="text-xs tabular-nums" style={{ color: 'var(--tag-body)' }}>
+                <p className="text-xs tabular-nums" style={{ color: "var(--text-tertiary)" }}>
                   {formatDate(holiday.date)}
                 </p>
               </div>

@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { User, Mail, Phone, Briefcase, Calendar, Building } from "lucide-react";
-import Link from "next/link";
+import { Mail, Phone, Briefcase, Calendar, Building, UserCircle2 } from "lucide-react";
+import { Badge, PageHeader, cn } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -18,178 +18,156 @@ export default async function ProfilePage() {
     .eq("id", user?.id)
     .single();
 
-  const { data: employee, error: employeeError } = await supabase
+  const { data: employee } = await supabase
     .from("employees")
-    .select(`
-      *,
-      designation:designations(name),
-      department:departments(name)
-    `)
+    .select(`*, designation:designations(name), department:departments(name)`)
     .eq("profile_id", user?.id)
     .single();
 
-  console.log("Employee data:", employee);
-  console.log("Employee error:", employeeError);
-  console.log("Employee exists?", !!employee);
-
-  // Fetch manager info separately if reports_to exists
-  let managerName = null;
+  let managerName: string | null = null;
   if (employee?.reports_to) {
-    // Try to fetch the manager's employee record and their profile
-    const { data: managerEmployee, error: managerError } = await supabase
+    const { data: managerEmployee } = await supabase
       .from("employees")
-      .select(`
-        id,
-        profile_id
-      `)
+      .select(`id, profile_id`)
       .eq("id", employee.reports_to)
       .single();
-    
+
     if (managerEmployee?.profile_id) {
-      // Fetch the manager's profile - use maybeSingle() instead of single() to handle missing records
-      const { data: managerProfile, error: profileError } = await supabase
+      const { data: managerProfile } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", managerEmployee.profile_id)
         .maybeSingle();
-      
-      if (managerProfile) {
-        managerName = managerProfile.full_name;
-      } else {
-        // Profile not found or not accessible
-        console.warn("Manager profile not found or not accessible:", managerEmployee.profile_id);
-        managerName = "Manager (Profile Not Found)";
-      }
+      managerName = managerProfile?.full_name ?? "Manager (profile unavailable)";
     }
   }
 
+  const initials = (profile?.full_name ?? "")
+    .split(" ")
+    .map((p: string) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "—";
+
+  const roleLabel =
+    profile?.role === "super_admin" ? "Super admin" :
+    profile?.role === "admin" ? "Admin" :
+    "Employee";
+
+  const statusMap: Record<string, { label: string; variant: "success" | "warning" | "danger" | "neutral" }> = {
+    active: { label: "Active", variant: "success" },
+    on_leave: { label: "On leave", variant: "warning" },
+    resigned: { label: "Resigned", variant: "danger" },
+    terminated: { label: "Terminated", variant: "danger" },
+    inactive: { label: "Inactive", variant: "neutral" },
+  };
+  const statusMeta = employee?.status ? statusMap[employee.status] : null;
+
   return (
-    <div>
-      <div className="mb-8">
-        <div>
-          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
-            My Profile
-          </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
-            View your personal and employment information
-          </p>
-        </div>
-      </div>
+    <div className="max-w-[1100px] mx-auto">
+      <PageHeader
+        eyebrow="Account"
+        title="My profile"
+        subtitle="Your personal and employment information on file."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <div className="card p-6">
-          <div className="flex flex-col items-center text-center">
-            <div 
-              className="w-24 h-24 rounded-full flex items-center justify-center mb-4"
-              style={{ background: 'linear-gradient(135deg, var(--tag-orange), var(--tag-amber))' }}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Identity card */}
+        <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+          <div className="p-6 flex flex-col items-center text-center">
+            <span
+              aria-hidden
+              className="inline-flex items-center justify-center w-20 h-20 rounded-md bg-surface-sunken border border-line-subtle text-[22px] font-light tracking-wide text-ink-secondary mb-4"
             >
-              <User className="w-12 h-12 text-white" />
-            </div>
-            <h2 className="text-xl font-light mb-1">{profile?.full_name}</h2>
-            <span className="badge-orange mb-4 capitalize">
-              {profile?.role?.replace("_", " ")}
+              {initials}
             </span>
-            {employee?.status && (
-              <span className={`badge ${
-                employee.status === 'active' ? 'badge-success' :
-                employee.status === 'on_leave' ? 'badge-warning' :
-                'badge-danger'
-              }`}>
-                {employee.status.replace("_", " ").toUpperCase()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="card p-6 lg:col-span-2">
-          <h3 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
-            Contact Information
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <Mail className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-              <div>
-                <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Email</p>
-                <p className="text-sm font-light">{profile?.email}</p>
-              </div>
+            <h2 className="text-[1.25rem] font-light tracking-[-0.015em] text-ink-primary mb-1">
+              {profile?.full_name}
+            </h2>
+            <p className="text-[11px] text-ink-tertiary font-mono tabular-nums mb-4">
+              {profile?.email}
+            </p>
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <Badge variant="accent" size="md">
+                {roleLabel}
+              </Badge>
+              {statusMeta && (
+                <Badge variant={statusMeta.variant} size="md" dot>
+                  {statusMeta.label}
+                </Badge>
+              )}
             </div>
-            {profile?.phone && (
-              <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Phone</p>
-                  <p className="text-sm font-light">{profile.phone}</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Employment Information */}
+        {/* Contact information */}
+        <div className="lg:col-span-2 rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-line-subtle">
+            <span className="eyebrow">Contact</span>
+            <h3 className="text-[15px] font-normal text-ink-primary mt-0.5">How to reach you</h3>
+          </div>
+          <dl className="divide-y divide-line-subtle">
+            <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={profile?.email ?? "—"} mono />
+            <InfoRow
+              icon={<Phone className="w-3.5 h-3.5" />}
+              label="Phone"
+              value={profile?.phone ?? "—"}
+              mono
+            />
+          </dl>
+        </div>
+
+        {/* Employment information */}
         {employee && (
-          <div className="card p-6 lg:col-span-3">
-            <h3 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
-              Employment Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="flex items-start gap-3">
-                <Briefcase className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Designation</p>
-                  <p className="text-sm font-light">{employee.designation?.name || "—"}</p>
-                </div>
+          <div className="lg:col-span-3 rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-line-subtle flex items-center justify-between">
+              <div>
+                <span className="eyebrow">Employment</span>
+                <h3 className="text-[15px] font-normal text-ink-primary mt-0.5">Role & tenure</h3>
               </div>
-
-              <div className="flex items-start gap-3">
-                <Building className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Department</p>
-                  <p className="text-sm font-light">{employee.department?.name || "—"}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Joining Date</p>
-                  <p className="text-sm font-light">
-                    {employee.joining_date ? formatDate(employee.joining_date) : "—"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Reports To</p>
-                  <p className="text-sm font-light">
-                    {managerName || "—"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Briefcase className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Employment Type</p>
-                  <p className="text-sm font-light capitalize">
-                    {employee.employment_type?.replace("_", " ") || "—"}
-                  </p>
-                </div>
-              </div>
-
               {employee.joining_date && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
-                  <div>
-                    <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Tenure</p>
-                    <p className="text-sm font-light">
-                      {calculateTenure(employee.joining_date)}
-                    </p>
-                  </div>
-                </div>
+                <span className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+                  Since {formatDate(employee.joining_date)}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-line-subtle">
+              <TileCell
+                icon={<Briefcase className="w-3.5 h-3.5" />}
+                label="Designation"
+                value={employee.designation?.name ?? "—"}
+              />
+              <TileCell
+                icon={<Building className="w-3.5 h-3.5" />}
+                label="Department"
+                value={employee.department?.name ?? "—"}
+              />
+              <TileCell
+                icon={<Calendar className="w-3.5 h-3.5" />}
+                label="Joining date"
+                value={employee.joining_date ? formatDate(employee.joining_date) : "—"}
+                mono
+              />
+              <TileCell
+                icon={<UserCircle2 className="w-3.5 h-3.5" />}
+                label="Reports to"
+                value={managerName ?? "—"}
+              />
+              <TileCell
+                icon={<Briefcase className="w-3.5 h-3.5" />}
+                label="Employment type"
+                value={
+                  employee.employment_type
+                    ? employee.employment_type.replace("_", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())
+                    : "—"
+                }
+              />
+              {employee.joining_date && (
+                <TileCell
+                  icon={<Calendar className="w-3.5 h-3.5" />}
+                  label="Tenure"
+                  value={calculateTenure(employee.joining_date)}
+                />
               )}
             </div>
           </div>
@@ -199,22 +177,71 @@ export default async function ProfilePage() {
   );
 }
 
+function InfoRow({
+  icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="px-5 py-3.5 flex items-center gap-3">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-sm bg-surface-sunken border border-line-subtle text-ink-tertiary shrink-0">
+        {icon}
+      </span>
+      <dt className="text-[11px] text-ink-tertiary uppercase tracking-[0.06em] font-medium w-24 shrink-0">
+        {label}
+      </dt>
+      <dd className={cn("text-[13px] text-ink-primary min-w-0 truncate", mono && "font-mono tabular-nums")}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function TileCell({
+  icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="bg-surface-raised px-5 py-4">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-ink-quaternary">{icon}</span>
+        <span className="eyebrow">{label}</span>
+      </div>
+      <div className={cn("text-[14px] text-ink-primary", mono && "font-mono tabular-nums")}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function calculateTenure(joiningDate: string): string {
   const start = new Date(joiningDate);
   const now = new Date();
-  
+
   const years = now.getFullYear() - start.getFullYear();
   const months = now.getMonth() - start.getMonth();
-  
   const totalMonths = years * 12 + months;
   const displayYears = Math.floor(totalMonths / 12);
   const displayMonths = totalMonths % 12;
-  
+
   if (displayYears === 0) {
-    return `${displayMonths} month${displayMonths !== 1 ? 's' : ''}`;
-  } else if (displayMonths === 0) {
-    return `${displayYears} year${displayYears !== 1 ? 's' : ''}`;
-  } else {
-    return `${displayYears} year${displayYears !== 1 ? 's' : ''}, ${displayMonths} month${displayMonths !== 1 ? 's' : ''}`;
+    return `${displayMonths} month${displayMonths !== 1 ? "s" : ""}`;
   }
+  if (displayMonths === 0) {
+    return `${displayYears} year${displayYears !== 1 ? "s" : ""}`;
+  }
+  return `${displayYears}y ${displayMonths}m`;
 }

@@ -86,16 +86,16 @@ export default function AttendanceReport() {
           <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
             Attendance Report
           </h3>
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Export attendance records for a specific month
           </p>
         </div>
-        <Calendar className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+        <Calendar className="w-5 h-5" style={{ color: "var(--accent)" }} />
       </div>
 
       <div className="flex items-end gap-4">
         <div className="flex-1">
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             Select Month
           </label>
           <input

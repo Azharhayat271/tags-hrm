@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, CalendarX2 } from "lucide-react";
 import type {
   AttendanceMatrix,
   AttendanceMatrixRow,
   DayCell,
 } from "@/lib/attendance/aggregate";
 import type { ViewMode } from "@/lib/attendance/filters";
+import { Badge, EmptyState, cn } from "@/components/ui";
 
 interface AttendanceReportTableProps {
   matrix: AttendanceMatrix;
@@ -18,6 +19,26 @@ interface AttendanceReportTableProps {
 }
 
 const WEEK_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+type CellTone = "success" | "warning" | "danger" | "accent" | "neutral" | "future";
+
+const toneBgClass: Record<CellTone, string> = {
+  success: "bg-[var(--success-tint)]",
+  warning: "bg-[var(--warning-tint)]",
+  danger:  "bg-[var(--danger-tint)]",
+  accent:  "bg-[var(--accent-tint)]",
+  neutral: "bg-surface-sunken/60",
+  future:  "bg-surface-raised",
+};
+
+const toneTextClass: Record<CellTone, string> = {
+  success: "text-[var(--success-text)]",
+  warning: "text-[var(--warning-text)]",
+  danger:  "text-[var(--danger-text)]",
+  accent:  "text-[var(--accent-deep)]",
+  neutral: "text-ink-quaternary",
+  future:  "text-ink-quaternary",
+};
 
 function formatDay(dayKey: string) {
   const [y, m, d] = dayKey.split("-").map(Number);
@@ -30,47 +51,13 @@ function formatDay(dayKey: string) {
   };
 }
 
-function cellStyleFor(cell: DayCell, isFuture: boolean): React.CSSProperties {
-  if (isFuture) {
-    return {
-      backgroundColor: "var(--tag-bg)",
-      color: "var(--tag-body)",
-    };
-  }
-  if (cell.isHoliday) {
-    return {
-      backgroundColor: "rgba(148, 163, 184, 0.08)",
-      color: "var(--tag-body)",
-    };
-  }
-  if (cell.isWeekend) {
-    if (cell.total > 0) {
-      return {
-        backgroundColor: "rgba(249, 115, 22, 0.12)",
-        color: "var(--tag-orange-deep)",
-      };
-    }
-    return {
-      backgroundColor: "rgba(148, 163, 184, 0.06)",
-      color: "var(--tag-body)",
-    };
-  }
-  if (cell.total >= 8) {
-    return {
-      backgroundColor: "rgba(22,163,74,0.13)",
-      color: "var(--tag-success)",
-    };
-  }
-  if (cell.total > 0) {
-    return {
-      backgroundColor: "rgba(234,179,8,0.15)",
-      color: "var(--tag-warning)",
-    };
-  }
-  return {
-    backgroundColor: "rgba(239,68,68,0.09)",
-    color: "var(--tag-danger)",
-  };
+function toneFor(cell: DayCell, isFuture: boolean): CellTone {
+  if (isFuture) return "future";
+  if (cell.isHoliday) return "neutral";
+  if (cell.isWeekend) return cell.total > 0 ? "accent" : "neutral";
+  if (cell.total >= 8) return "success";
+  if (cell.total > 0) return "warning";
+  return "danger";
 }
 
 function tooltipFor(row: AttendanceMatrixRow, cell: DayCell, dayKey: string): string {
@@ -83,6 +70,15 @@ function tooltipFor(row: AttendanceMatrixRow, cell: DayCell, dayKey: string): st
   if (cell.flags.includes("auto_closed")) parts.push("Has auto-closed session");
   if (cell.hasOpenSession) parts.push("Has open session");
   return parts.join(" · ");
+}
+
+function initialsFor(name: string) {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 export default function AttendanceReportTable({
@@ -101,9 +97,12 @@ export default function AttendanceReportTable({
 
   if (matrix.rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-16">
-        <AlertCircle className="w-6 h-6" style={{ color: "var(--tag-body)" }} />
-        <p style={{ color: "var(--tag-body)" }}>No employees match the current filters.</p>
+      <div className="p-6">
+        <EmptyState
+          icon={<CalendarX2 className="w-5 h-5" />}
+          title="No employees match the filters"
+          description="Try clearing the department, search, or status filters to see more people."
+        />
       </div>
     );
   }
@@ -133,6 +132,9 @@ export default function AttendanceReportTable({
   return <SummaryView matrix={matrix} rangeStart={rangeStart} rangeEnd={rangeEnd} />;
 }
 
+/* =====================================================================
+ * Matrix view — dense bloomberg-style grid
+ * ===================================================================== */
 function MatrixView({
   matrix,
   todayKey,
@@ -154,207 +156,254 @@ function MatrixView({
 
   const overallTotal = matrix.period.totalsAcrossEmployees.totalHours;
 
+  const stickyRightTotal = "right-0";
+  const stickyRightOT    = "right-[88px]";
+
   return (
-    <table className="w-full min-w-max border-collapse">
+    <table className="w-full min-w-max border-collapse text-[12px]">
       <thead>
-        <tr
-          className="table-header sticky top-0"
-          style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 20 }}
-        >
+        <tr className="sticky top-0 z-20 bg-surface-sunken">
           <th
-            className="text-left px-4 py-2 sticky left-0"
-            style={{
-              backgroundColor: "var(--tag-bg-warm)",
-              minWidth: "220px",
-              zIndex: 21,
-            }}
+            className={cn(
+              "text-left px-4 py-2.5 sticky left-0 z-30 bg-surface-sunken",
+              "border-b border-r border-line-subtle",
+            )}
+            style={{ minWidth: "240px" }}
           >
-            Employee
+            <span className="eyebrow">Employee</span>
           </th>
           {matrix.dayKeys.map((dk) => {
             const info = formatDay(dk);
             const isWknd = matrix.weekendDayKeys.has(dk);
             const isHol = matrix.holidayDayKeys.has(dk);
-            const dimmed = isWknd || isHol;
+            const isToday = dk === todayKey;
             return (
               <th
                 key={dk}
-                className="text-center px-1.5 py-2"
-                style={{
-                  minWidth: "58px",
-                  color: dimmed ? "var(--tag-body)" : "var(--tag-label)",
-                  opacity: dimmed ? 0.75 : 1,
-                }}
+                className={cn(
+                  "text-center px-1 py-2 border-b border-line-subtle",
+                  isToday && "bg-accent-tint",
+                )}
+                style={{ minWidth: "52px" }}
                 title={isHol ? `Holiday: ${matrix.holidayDayKeys.get(dk)}` : isWknd ? "Weekend" : ""}
               >
-                <div className="text-[10px] uppercase">{info.weekday}</div>
-                <div className="text-sm tabular-nums">{info.day}</div>
+                <div
+                  className={cn(
+                    "text-[9px] font-medium uppercase tracking-[0.06em]",
+                    isWknd || isHol ? "text-ink-quaternary" : "text-ink-tertiary",
+                  )}
+                >
+                  {info.weekday}
+                </div>
+                <div
+                  className={cn(
+                    "text-[11px] font-mono tabular-nums mt-0.5",
+                    isToday ? "text-[var(--accent-deep)] font-semibold" :
+                    isWknd || isHol ? "text-ink-quaternary" : "text-ink-secondary",
+                  )}
+                >
+                  {String(info.day).padStart(2, "0")}
+                </div>
               </th>
             );
           })}
           <th
-            className="text-center px-3 py-2 sticky right-0"
-            style={{ backgroundColor: "var(--tag-bg-warm)", minWidth: "90px", zIndex: 21 }}
+            className={cn(
+              "text-right px-3 py-2.5 sticky z-30 bg-surface-sunken",
+              "border-b border-l border-line-subtle",
+              stickyRightOT,
+            )}
+            style={{ minWidth: "80px" }}
           >
-            Total
+            <span className="eyebrow">OT</span>
           </th>
           <th
-            className="text-center px-3 py-2 sticky right-0"
-            style={{
-              backgroundColor: "var(--tag-bg-warm)",
-              minWidth: "80px",
-              right: "90px",
-              zIndex: 21,
-            }}
+            className={cn(
+              "text-right px-3 py-2.5 sticky z-30 bg-surface-sunken",
+              "border-b border-l border-line-subtle",
+              stickyRightTotal,
+            )}
+            style={{ minWidth: "88px" }}
           >
-            OT
-          </th>
-          <th
-            className="text-center px-2 py-2"
-            style={{ minWidth: "70px" }}
-          >
-            Absent
-          </th>
-          <th
-            className="text-center px-3 py-2"
-            style={{ minWidth: "90px" }}
-          >
-            Details
+            <span className="eyebrow">Total</span>
           </th>
         </tr>
       </thead>
       <tbody>
         {matrix.rows.map((row) => (
-          <tr key={row.employeeId} className="table-row">
+          <tr key={row.employeeId} className="group hover:bg-surface-muted/40 transition-colors duration-fast">
             <td
-              className="px-4 py-2 sticky left-0"
-              style={{ backgroundColor: "var(--tag-bg)", zIndex: 10 }}
+              className={cn(
+                "px-4 py-2.5 sticky left-0 z-10 bg-surface-raised",
+                "group-hover:bg-[var(--stone-100)]",
+                "border-b border-r border-line-subtle transition-colors duration-fast",
+              )}
             >
-              <p className="font-normal leading-tight">{row.employeeName}</p>
-              <p className="text-[11px]" style={{ color: "var(--tag-body)" }}>
-                {row.employeeEmail}
-              </p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {row.totals.openSessions > 0 && (
-                  <span className="badge badge-warning">{row.totals.openSessions} open</span>
-                )}
-                {row.totals.autoClosedSessions > 0 && (
-                  <span
-                    className="badge"
-                    style={{ backgroundColor: "rgba(100,116,139,0.1)", color: "var(--tag-label)" }}
-                  >
-                    ⚙ {row.totals.autoClosedSessions}
-                  </span>
-                )}
-                {row.totals.manualEntrySessions > 0 && (
-                  <span className="badge badge-orange">M {row.totals.manualEntrySessions}</span>
-                )}
+              <div className="flex items-center gap-2.5">
+                <span
+                  aria-hidden
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-sm bg-surface-sunken border border-line-subtle text-[10px] font-medium text-ink-secondary tracking-wide shrink-0"
+                >
+                  {initialsFor(row.employeeName)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
+                      className="text-[13px] text-ink-primary font-normal truncate hover:text-ink-accent transition-colors"
+                    >
+                      {row.employeeName}
+                    </Link>
+                    <ArrowRight
+                      className="w-3 h-3 text-ink-quaternary opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <div className="text-[11px] text-ink-tertiary truncate">
+                    {row.employeeEmail}
+                    {row.departmentName && (
+                      <>
+                        <span className="text-ink-quaternary"> · </span>
+                        {row.departmentName}
+                      </>
+                    )}
+                  </div>
+                  {(row.totals.openSessions > 0 ||
+                    row.totals.autoClosedSessions > 0 ||
+                    row.totals.manualEntrySessions > 0) && (
+                    <div className="flex gap-1 mt-1">
+                      {row.totals.openSessions > 0 && (
+                        <Badge variant="info" size="sm" dot>
+                          {row.totals.openSessions} open
+                        </Badge>
+                      )}
+                      {row.totals.autoClosedSessions > 0 && (
+                        <Badge variant="warning" size="sm" mono>
+                          ⚙ {row.totals.autoClosedSessions}
+                        </Badge>
+                      )}
+                      {row.totals.manualEntrySessions > 0 && (
+                        <Badge variant="accent" size="sm" mono>
+                          M {row.totals.manualEntrySessions}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </td>
             {matrix.dayKeys.map((dk) => {
               const cell = row.dayHours[dk];
               const isFuture = dk > todayKey;
-              const style = cellStyleFor(cell, isFuture);
+              const isToday = dk === todayKey;
+              const tone = toneFor(cell, isFuture);
               return (
                 <td
                   key={`${row.employeeId}-${dk}`}
-                  className="px-1.5 py-1 text-center tabular-nums"
+                  className={cn(
+                    "relative text-center border-b border-r border-line-subtle/60 last:border-r-0",
+                    "px-0.5 py-1.5 transition-colors duration-fast",
+                    toneBgClass[tone],
+                    isToday && !isFuture && "ring-1 ring-inset ring-[var(--accent-wash)]",
+                  )}
                   title={tooltipFor(row, cell, dk)}
-                  style={style}
                 >
-                  <div className="text-sm leading-tight">
+                  <span
+                    className={cn(
+                      "block font-mono tabular-nums text-[12px] leading-none",
+                      toneTextClass[tone],
+                      isFuture && "opacity-40",
+                    )}
+                  >
                     {cell.total > 0 ? cell.total.toFixed(1) : isFuture ? "" : "—"}
-                  </div>
+                  </span>
                   {cell.overtime > 0 && (
-                    <div
-                      className="text-[10px] leading-tight"
-                      style={{ color: "var(--tag-orange-deep)" }}
+                    <span
+                      className="block font-mono tabular-nums text-[9px] leading-none mt-1 text-[var(--accent-deep)]"
+                      title="Overtime"
                     >
-                      +{cell.overtime.toFixed(1)} OT
-                    </div>
+                      +{cell.overtime.toFixed(1)}
+                    </span>
+                  )}
+                  {cell.flags.includes("manual") && (
+                    <span className="absolute top-0.5 right-0.5 w-1 h-1 rounded-pill bg-[var(--accent)]" aria-label="Manual entry" />
                   )}
                 </td>
               );
             })}
             <td
-              className="px-3 py-2 text-center tabular-nums font-medium sticky right-0"
-              style={{ backgroundColor: "var(--tag-bg)", zIndex: 10 }}
+              className={cn(
+                "sticky z-10 bg-surface-raised group-hover:bg-[var(--stone-100)]",
+                "px-3 py-2 text-right font-mono tabular-nums text-[12px]",
+                "border-b border-l border-line-subtle transition-colors duration-fast",
+                stickyRightOT,
+                row.totals.overtimeHours > 0 ? "text-[var(--accent-deep)]" : "text-ink-quaternary",
+              )}
             >
-              {row.totals.totalHours.toFixed(1)}h
+              {row.totals.overtimeHours > 0 ? row.totals.overtimeHours.toFixed(1) : "—"}
             </td>
             <td
-              className="px-3 py-2 text-center tabular-nums sticky right-0"
-              style={{
-                backgroundColor: "var(--tag-bg)",
-                right: "90px",
-                zIndex: 10,
-                color: row.totals.overtimeHours > 0 ? "var(--tag-orange-deep)" : "var(--tag-body)",
-              }}
+              className={cn(
+                "sticky z-10 bg-surface-raised group-hover:bg-[var(--stone-100)]",
+                "px-3 py-2 text-right font-mono tabular-nums text-[13px] text-ink-primary",
+                "border-b border-l border-line-subtle transition-colors duration-fast",
+                stickyRightTotal,
+              )}
             >
-              {row.totals.overtimeHours > 0 ? `${row.totals.overtimeHours.toFixed(1)}h` : "—"}
-            </td>
-            <td className="px-2 py-2 text-center tabular-nums" style={{ color: "var(--tag-body)" }}>
-              {row.totals.daysAbsent}
-            </td>
-            <td className="px-3 py-2 text-center text-sm">
-              <Link
-                href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
-                className="inline-flex items-center gap-1 hover:underline"
-                style={{ color: "var(--tag-orange)" }}
-              >
-                View
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+              {row.totals.totalHours.toFixed(1)}
+              <span className="text-[10px] text-ink-quaternary">h</span>
             </td>
           </tr>
         ))}
-        <tr
-          style={{
-            backgroundColor: "var(--tag-bg-warm)",
-            borderTop: "2px solid var(--tag-border)",
-          }}
-        >
+
+        {/* Daily totals footer — bloomberg ledger feel */}
+        <tr className="bg-[var(--stone-100)]">
           <td
-            className="px-4 py-2 font-medium sticky left-0"
-            style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}
+            className={cn(
+              "sticky left-0 z-10 bg-[var(--stone-100)]",
+              "px-4 py-2.5 border-t-2 border-r border-line",
+            )}
           >
-            Daily totals
+            <div className="flex items-center gap-2">
+              <span className="eyebrow">Daily totals</span>
+            </div>
           </td>
           {matrix.dayKeys.map((dk) => (
             <td
               key={`totals-${dk}`}
-              className="px-1.5 py-2 text-center tabular-nums font-medium"
+              className="px-0.5 py-2.5 text-center font-mono tabular-nums text-[11px] text-ink-secondary border-t-2 border-r border-line-subtle/60 last:border-r-0"
             >
               {dayTotals[dk] > 0 ? dayTotals[dk].toFixed(1) : "—"}
             </td>
           ))}
           <td
-            className="px-3 py-2 text-center tabular-nums font-semibold sticky right-0"
-            style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}
+            className={cn(
+              "sticky z-10 bg-[var(--stone-100)] font-mono tabular-nums text-[12px] text-[var(--accent-deep)]",
+              "px-3 py-2.5 text-right border-t-2 border-l border-line",
+              stickyRightOT,
+            )}
           >
-            {overallTotal.toFixed(1)}h
+            {matrix.period.totalsAcrossEmployees.overtimeHours.toFixed(1)}
           </td>
           <td
-            className="px-3 py-2 text-center tabular-nums sticky right-0"
-            style={{
-              backgroundColor: "var(--tag-bg-warm)",
-              right: "90px",
-              zIndex: 10,
-              color: "var(--tag-orange-deep)",
-            }}
+            className={cn(
+              "sticky z-10 bg-[var(--stone-100)] font-mono tabular-nums text-[13px] text-ink-primary font-medium",
+              "px-3 py-2.5 text-right border-t-2 border-l border-line",
+              stickyRightTotal,
+            )}
           >
-            {matrix.period.totalsAcrossEmployees.overtimeHours.toFixed(1)}h
+            {overallTotal.toFixed(1)}
+            <span className="text-[10px] text-ink-tertiary font-normal">h</span>
           </td>
-          <td className="px-2 py-2 text-center" style={{ color: "var(--tag-body)" }}>
-            {matrix.period.totalsAcrossEmployees.totalAbsentDays}
-          </td>
-          <td />
         </tr>
       </tbody>
     </table>
   );
 }
 
+/* =====================================================================
+ * Summary view — clean numeric table with inline percentage bar
+ * ===================================================================== */
 function SummaryView({
   matrix,
   rangeStart,
@@ -365,92 +414,145 @@ function SummaryView({
   rangeEnd: string;
 }) {
   return (
-    <table className="w-full">
+    <table className="w-full border-collapse text-[13px]">
       <thead>
-        <tr className="table-header sticky top-0" style={{ backgroundColor: "var(--tag-bg-warm)", zIndex: 10 }}>
-          <th className="text-left px-4 py-3">Employee</th>
-          <th className="text-center px-3 py-3">Present</th>
-          <th className="text-center px-3 py-3">Partial</th>
-          <th className="text-center px-3 py-3">Absent</th>
-          <th className="text-center px-3 py-3">Total</th>
-          <th className="text-center px-3 py-3">Regular</th>
-          <th className="text-center px-3 py-3">Overtime</th>
-          <th className="text-center px-3 py-3">Attendance</th>
-          <th className="text-center px-3 py-3">Details</th>
+        <tr className="sticky top-0 z-10 bg-surface-sunken">
+          <th className="text-left px-5 py-3 border-b border-line-subtle">
+            <span className="eyebrow">Employee</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 90 }}>
+            <span className="eyebrow">Present</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 90 }}>
+            <span className="eyebrow">Partial</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 90 }}>
+            <span className="eyebrow">Absent</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 110 }}>
+            <span className="eyebrow">Total</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 110 }}>
+            <span className="eyebrow">Regular</span>
+          </th>
+          <th className="text-right px-3 py-3 border-b border-line-subtle" style={{ width: 110 }}>
+            <span className="eyebrow">Overtime</span>
+          </th>
+          <th className="text-left px-3 py-3 border-b border-line-subtle" style={{ width: 160 }}>
+            <span className="eyebrow">Attendance</span>
+          </th>
+          <th className="px-3 py-3 border-b border-line-subtle" style={{ width: 80 }} />
         </tr>
       </thead>
       <tbody>
-        {matrix.rows.map((row) => (
-          <tr key={row.employeeId} className="table-row">
-            <td className="px-4 py-3">
-              <p className="font-normal">{row.employeeName}</p>
-              <p className="text-xs" style={{ color: "var(--tag-body)" }}>
-                {row.employeeEmail}
-                {row.departmentName ? ` · ${row.departmentName}` : ""}
-              </p>
-            </td>
-            <td className="px-3 py-3 text-center tabular-nums">
-              <span className="badge badge-success">{row.totals.daysPresent}</span>
-            </td>
-            <td className="px-3 py-3 text-center tabular-nums">
-              <span className="badge badge-warning">{row.totals.daysPartial}</span>
-            </td>
-            <td className="px-3 py-3 text-center tabular-nums">
-              <span
-                className="badge"
-                style={{
-                  backgroundColor:
-                    row.totals.daysAbsent > 0 ? "var(--tag-danger-bg)" : "var(--tag-bg-warm)",
-                  color: row.totals.daysAbsent > 0 ? "#dc2626" : "var(--tag-body)",
-                }}
-              >
-                {row.totals.daysAbsent}
-              </span>
-            </td>
-            <td className="px-3 py-3 text-center tabular-nums font-medium">
-              {row.totals.totalHours.toFixed(1)}h
-            </td>
-            <td className="px-3 py-3 text-center tabular-nums" style={{ color: "var(--tag-body)" }}>
-              {row.totals.regularHours.toFixed(1)}h
-            </td>
-            <td
-              className="px-3 py-3 text-center tabular-nums"
-              style={{
-                color: row.totals.overtimeHours > 0 ? "var(--tag-orange-deep)" : "var(--tag-body)",
-              }}
+        {matrix.rows.map((row) => {
+          const pct = row.totals.attendancePercentage;
+          const pctTone =
+            pct >= 90 ? "var(--success-text)" :
+            pct >= 75 ? "var(--warning-text)" :
+            "var(--danger-text)";
+          const pctBar =
+            pct >= 90 ? "bg-[var(--success)]" :
+            pct >= 75 ? "bg-[var(--warning)]" :
+            "bg-[var(--danger)]";
+          return (
+            <tr
+              key={row.employeeId}
+              className="group border-b border-line-subtle hover:bg-surface-muted/60 transition-colors duration-fast"
             >
-              {row.totals.overtimeHours > 0 ? `${row.totals.overtimeHours.toFixed(1)}h` : "—"}
-            </td>
-            <td className="px-3 py-3 text-center">
-              <span
-                className={`badge ${
-                  row.totals.attendancePercentage >= 90
-                    ? "badge-success"
-                    : row.totals.attendancePercentage >= 75
-                    ? "badge-warning"
-                    : "badge-danger"
-                }`}
-              >
-                {row.totals.attendancePercentage}%
-              </span>
-            </td>
-            <td className="px-3 py-3 text-center">
-              <Link
-                href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
-                className="inline-flex items-center gap-1 text-sm hover:underline"
-                style={{ color: "var(--tag-orange)" }}
-              >
-                View
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </td>
-          </tr>
-        ))}
+              <td className="px-5 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    aria-hidden
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-sm bg-surface-sunken border border-line-subtle text-[11px] font-medium text-ink-secondary shrink-0"
+                  >
+                    {initialsFor(row.employeeName)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-ink-primary truncate">{row.employeeName}</div>
+                    <div className="text-[11px] text-ink-tertiary truncate">
+                      {row.employeeEmail}
+                      {row.departmentName && (
+                        <>
+                          <span className="text-ink-quaternary"> · </span>
+                          {row.departmentName}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-3 py-3 text-right font-mono tabular-nums text-[var(--success-text)]">
+                {row.totals.daysPresent}
+              </td>
+              <td className="px-3 py-3 text-right font-mono tabular-nums text-[var(--warning-text)]">
+                {row.totals.daysPartial || <span className="text-ink-quaternary">—</span>}
+              </td>
+              <td className={cn(
+                "px-3 py-3 text-right font-mono tabular-nums",
+                row.totals.daysAbsent > 0 ? "text-[var(--danger-text)]" : "text-ink-quaternary",
+              )}>
+                {row.totals.daysAbsent || "—"}
+              </td>
+              <td className="px-3 py-3 text-right font-mono tabular-nums text-ink-primary">
+                {row.totals.totalHours.toFixed(1)}
+                <span className="text-[10px] text-ink-quaternary">h</span>
+              </td>
+              <td className="px-3 py-3 text-right font-mono tabular-nums text-ink-secondary">
+                {row.totals.regularHours.toFixed(1)}
+                <span className="text-[10px] text-ink-quaternary">h</span>
+              </td>
+              <td className={cn(
+                "px-3 py-3 text-right font-mono tabular-nums",
+                row.totals.overtimeHours > 0 ? "text-[var(--accent-deep)]" : "text-ink-quaternary",
+              )}>
+                {row.totals.overtimeHours > 0 ? (
+                  <>
+                    +{row.totals.overtimeHours.toFixed(1)}
+                    <span className="text-[10px] opacity-70">h</span>
+                  </>
+                ) : "—"}
+              </td>
+              <td className="px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1 rounded-pill bg-surface-sunken overflow-hidden min-w-[60px]">
+                    <div
+                      className={cn("h-full rounded-pill transition-all", pctBar)}
+                      style={{ width: `${Math.max(pct, 2)}%` }}
+                    />
+                  </div>
+                  <span
+                    className="font-mono tabular-nums text-[12px] min-w-[36px] text-right"
+                    style={{ color: pctTone }}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+              </td>
+              <td className="px-3 py-3 text-right">
+                <Link
+                  href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[12px] text-ink-tertiary",
+                    "opacity-0 group-hover:opacity-100 transition-opacity",
+                    "hover:text-ink-accent",
+                  )}
+                >
+                  View
+                  <ArrowRight className="w-3 h-3" strokeWidth={2} />
+                </Link>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
 }
 
+/* =====================================================================
+ * Calendar view — per-employee mini heat grid
+ * ===================================================================== */
 function CalendarView({
   matrix,
   todayKey,
@@ -463,7 +565,7 @@ function CalendarView({
   rangeEnd: string;
 }) {
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-5 space-y-4 bg-surface-canvas">
       {matrix.rows.map((row) => (
         <CalendarRow
           key={row.employeeId}
@@ -499,76 +601,99 @@ function CalendarRow({
   while (cells.length % 7 !== 0) cells.push({ key: `trail-${cells.length}`, empty: true });
 
   return (
-    <div
-      className="rounded-md border"
-      style={{ borderColor: "var(--tag-border)", backgroundColor: "var(--tag-bg)" }}
-    >
-      <div
-        className="flex items-center justify-between px-4 py-3 border-b"
-        style={{ borderColor: "var(--tag-border)" }}
-      >
-        <div>
-          <p className="font-normal">{row.employeeName}</p>
-          <p className="text-xs" style={{ color: "var(--tag-body)" }}>
-            {row.totals.totalHours.toFixed(1)}h · OT {row.totals.overtimeHours.toFixed(1)}h ·{" "}
-            {row.totals.attendancePercentage}% attendance
-          </p>
+    <div className="rounded-md border border-line-subtle bg-surface-raised overflow-hidden shadow-e1">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-subtle">
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            aria-hidden
+            className="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-surface-sunken border border-line-subtle text-[11px] font-medium text-ink-secondary shrink-0"
+          >
+            {initialsFor(row.employeeName)}
+          </span>
+          <div className="min-w-0">
+            <div className="text-[14px] text-ink-primary truncate">{row.employeeName}</div>
+            <div className="text-[11px] text-ink-tertiary font-mono tabular-nums flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+              <span>{row.totals.totalHours.toFixed(1)}h total</span>
+              <span className="text-ink-quaternary">·</span>
+              <span className="text-[var(--accent-deep)]">+{row.totals.overtimeHours.toFixed(1)}h OT</span>
+              <span className="text-ink-quaternary">·</span>
+              <span
+                className={cn(
+                  row.totals.attendancePercentage >= 90 ? "text-[var(--success-text)]" :
+                  row.totals.attendancePercentage >= 75 ? "text-[var(--warning-text)]" :
+                  "text-[var(--danger-text)]",
+                )}
+              >
+                {row.totals.attendancePercentage}%
+              </span>
+            </div>
+          </div>
         </div>
         <Link
           href={`/admin/attendance/${row.employeeId}?start=${rangeStart}&end=${rangeEnd}`}
-          className="text-sm hover:underline inline-flex items-center gap-1"
-          style={{ color: "var(--tag-orange)" }}
+          className="text-[12px] text-ink-tertiary hover:text-ink-accent inline-flex items-center gap-1 transition-colors"
         >
-          Details <ArrowRight className="w-3 h-3" />
+          Details <ArrowRight className="w-3 h-3" strokeWidth={2} />
         </Link>
       </div>
-      <div className="grid grid-cols-7 gap-px" style={{ backgroundColor: "var(--tag-border)" }}>
+      <div className="grid grid-cols-7">
         {WEEK_HEADERS.map((h) => (
           <div
             key={h}
-            className="px-2 py-1.5 text-[11px] uppercase tracking-wide text-center"
-            style={{ backgroundColor: "var(--tag-bg-warm)", color: "var(--tag-label)" }}
+            className="px-2 py-1.5 text-[9px] font-medium uppercase tracking-[0.06em] text-center text-ink-tertiary bg-surface-sunken border-b border-line-subtle"
           >
             {h}
           </div>
         ))}
-        {cells.map((c) => {
+        {cells.map((c, idx) => {
+          const isLastCol = (idx + 1) % 7 === 0;
           if (c.empty) {
             return (
               <div
                 key={c.key}
-                style={{ backgroundColor: "var(--tag-bg-warm)", minHeight: "54px" }}
+                className={cn(
+                  "bg-surface-sunken/40 border-b border-line-subtle",
+                  !isLastCol && "border-r",
+                )}
+                style={{ minHeight: "52px" }}
               />
             );
           }
           const cell = row.dayHours[c.key];
           const info = formatDay(c.key);
           const isFuture = c.key > todayKey;
-          const style = cellStyleFor(cell, isFuture);
+          const isToday = c.key === todayKey;
+          const tone = toneFor(cell, isFuture);
+
           return (
             <div
               key={c.key}
-              className="px-2 py-1.5"
-              style={{ ...style, minHeight: "54px" }}
+              className={cn(
+                "px-2 py-1.5 flex flex-col justify-between border-b border-line-subtle",
+                !isLastCol && "border-r",
+                toneBgClass[tone],
+              )}
+              style={{ minHeight: "52px" }}
               title={tooltipFor(row, cell, c.key)}
             >
-              <div
-                className="text-[11px] font-medium"
-                style={{ color: isFuture ? "var(--tag-body)" : undefined, opacity: isFuture ? 0.6 : 1 }}
-              >
-                {info.day}
-              </div>
-              <div className="text-sm tabular-nums leading-tight">
-                {cell.total > 0 ? `${cell.total.toFixed(1)}h` : isFuture ? "" : "—"}
-              </div>
-              {cell.overtime > 0 && (
-                <div
-                  className="text-[10px] tabular-nums"
-                  style={{ color: "var(--tag-orange-deep)" }}
+              <div className="flex items-center justify-between">
+                <span
+                  className={cn(
+                    "text-[10px] font-mono tabular-nums",
+                    isToday ? "bg-accent text-white px-1 py-0.5 rounded-xs" : toneTextClass[tone],
+                  )}
                 >
-                  +{cell.overtime.toFixed(1)} OT
-                </div>
-              )}
+                  {String(info.day).padStart(2, "0")}
+                </span>
+                {cell.overtime > 0 && (
+                  <span className="text-[8px] font-mono text-[var(--accent-deep)]">
+                    +{cell.overtime.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <span className={cn("text-[12px] font-mono tabular-nums leading-none", toneTextClass[tone])}>
+                {cell.total > 0 ? `${cell.total.toFixed(1)}h` : isFuture ? "" : "—"}
+              </span>
             </div>
           );
         })}

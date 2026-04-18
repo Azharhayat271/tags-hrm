@@ -59,7 +59,7 @@ export default function CheckInButton({ employeeId, activeSession }: CheckInButt
           <p className="text-sm mb-1" style={{ color: 'var(--tag-success)' }}>
             ✓ Active Session
           </p>
-          <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
             Checked in at {checkInTime}
           </p>
         </div>

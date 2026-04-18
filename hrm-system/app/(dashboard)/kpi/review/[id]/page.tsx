@@ -54,17 +54,17 @@ export default async function AcknowledgeReviewPage({
       <Link
         href="/kpi"
         className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-70 transition-opacity"
-        style={{ color: 'var(--tag-orange)' }}
+        style={{ color: "var(--accent)" }}
       >
         <ArrowLeft className="w-4 h-4" />
         Back to KPI
       </Link>
 
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Acknowledge Review
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Review and acknowledge your performance evaluation
         </p>
       </div>
@@ -78,7 +78,7 @@ export default async function AcknowledgeReviewPage({
                 <h2 className="text-xl font-light mb-1" style={{ letterSpacing: '-0.26px' }}>
                   {review.cycle}
                 </h2>
-                <p className="text-sm" style={{ color: 'var(--tag-label)' }}>
+                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
                   Reviewed by {review.reviewed_by_profile?.full_name || '—'}
                 </p>
               </div>
@@ -95,7 +95,7 @@ export default async function AcknowledgeReviewPage({
                   </span>
                 )}
                 {review.overall_score !== null && (
-                  <p className="text-2xl font-light tabular-nums mt-2" style={{ color: 'var(--tag-orange)' }}>
+                  <p className="text-2xl font-light tabular-nums mt-2" style={{ color: "var(--accent)" }}>
                     {review.overall_score}%
                   </p>
                 )}
@@ -103,11 +103,11 @@ export default async function AcknowledgeReviewPage({
             </div>
 
             {review.manager_notes && (
-              <div className="p-4 rounded" style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
-                <p className="text-xs font-normal mb-2" style={{ color: 'var(--tag-label)' }}>
+              <div className="p-4 rounded" style={{ backgroundColor: "var(--surface-muted)" }}>
+                <p className="text-xs font-normal mb-2" style={{ color: "var(--text-secondary)" }}>
                   Manager Feedback
                 </p>
-                <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+                <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
                   {review.manager_notes}
                 </p>
               </div>
@@ -120,7 +120,7 @@ export default async function AcknowledgeReviewPage({
         {/* Info Sidebar */}
         <div className="card p-6">
           <h3 className="text-base font-normal mb-4">About Acknowledgment</h3>
-          <div className="space-y-4 text-sm" style={{ color: 'var(--tag-body)' }}>
+          <div className="space-y-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
             <p>
               Acknowledging your review confirms that you have read and understood the feedback provided by your manager.
             </p>

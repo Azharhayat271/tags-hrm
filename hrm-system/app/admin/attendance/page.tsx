@@ -215,24 +215,19 @@ export default async function AdminAttendancePage({
 
   return (
     <div
-      className="flex flex-col"
-      style={{
-        height: "calc(100vh - 73px - 4rem)",
-        margin: "-2rem",
-        padding: "1.25rem 1.5rem",
-        gap: "1rem",
-        overflow: "hidden",
-        minWidth: 0,
-        width: "auto",
-      }}
+      className="flex flex-col gap-4 -mx-8 -my-8 px-6 py-5"
+      style={{ height: "calc(100vh - 64px)", minWidth: 0 }}
     >
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
-          <h1 style={{ fontSize: "1.75rem", lineHeight: 1.1, letterSpacing: "-0.56px" }}>
+          <span className="eyebrow block mb-1">Reports</span>
+          <h1 className="text-[1.75rem] leading-[1.1] font-light tracking-[-0.02em]">
             Attendance
           </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--tag-body)" }}>
-            {periodLabel} · {displayedMatrix.rows.length} of {matrix.rows.length} employees
+          <p className="text-[13px] text-ink-tertiary mt-1 font-mono tabular-nums">
+            <span className="text-ink-secondary">{periodLabel}</span>
+            <span className="text-ink-quaternary"> · </span>
+            {displayedMatrix.rows.length} of {matrix.rows.length} employees
           </p>
         </div>
         <ExportButtons
@@ -255,10 +250,10 @@ export default async function AdminAttendancePage({
       </div>
 
       <div
-        className="card flex-1 flex flex-col overflow-hidden"
-        style={{ padding: 0, minHeight: 0, minWidth: 0 }}
+        className="flex-1 flex flex-col overflow-hidden rounded-md border border-line-subtle bg-surface-raised shadow-e1"
+        style={{ minHeight: 0, minWidth: 0 }}
       >
-        <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "auto" }}>
+        <div className="flex-1 min-h-0 min-w-0 overflow-auto">
           <AttendanceReportTable
             matrix={displayedMatrix}
             view={filterState.view}

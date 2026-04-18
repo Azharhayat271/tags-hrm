@@ -29,10 +29,10 @@ export default async function PayrollPage() {
   if (!employee) {
     return (
       <div>
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Payroll
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Employee record not found
         </p>
       </div>
@@ -72,10 +72,10 @@ export default async function PayrollPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Payroll
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           View and download your salary slips
         </p>
       </div>
@@ -86,16 +86,16 @@ export default async function PayrollPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-                <DollarSign className="w-8 h-8" style={{ color: 'var(--tag-orange)' }} />
+                <DollarSign className="w-8 h-8" style={{ color: "var(--accent)" }} />
               </div>
               <div>
-                <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+                <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                   Latest Salary Slip
                 </p>
                 <h3 className="text-2xl font-light mb-1">
                   {getMonthName(latestSlip.month)} {latestSlip.year}
                 </h3>
-                <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+                <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
                   Uploaded {formatDate(latestSlip.uploaded_at)}
                 </p>
               </div>
@@ -120,7 +120,7 @@ export default async function PayrollPage() {
         {years.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-            <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
               No salary slips available yet
             </p>
           </div>
@@ -128,7 +128,7 @@ export default async function PayrollPage() {
           <div className="space-y-6">
             {years.map((year) => (
               <div key={year}>
-                <h4 className="text-base font-normal mb-3" style={{ color: 'var(--tag-label)' }}>
+                <h4 className="text-base font-normal mb-3" style={{ color: "var(--text-secondary)" }}>
                   {year}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -137,11 +137,11 @@ export default async function PayrollPage() {
                       key={slip.id}
                       href={`/payroll/${slip.id}`}
                       className="p-4 rounded border hover:border-orange-300 transition-colors"
-                      style={{ borderColor: 'var(--tag-border)' }}
+                      style={{ borderColor: "var(--border-subtle)" }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4" style={{ color: 'var(--tag-orange)' }} />
+                          <FileText className="w-4 h-4" style={{ color: "var(--accent)" }} />
                           <span className="text-sm font-normal">
                             {getMonthName(slip.month)}
                           </span>
@@ -150,7 +150,7 @@ export default async function PayrollPage() {
                           <span className="badge-success text-[9px]">LATEST</span>
                         )}
                       </div>
-                      <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+                      <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
                         Uploaded {formatDate(slip.uploaded_at)}
                       </p>
                     </Link>

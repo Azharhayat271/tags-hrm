@@ -22,10 +22,10 @@ export default async function LifecyclePage() {
   if (!employee) {
     return (
       <div>
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           My Journey
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Employee record not found
         </p>
       </div>
@@ -66,10 +66,10 @@ export default async function LifecyclePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           My Journey
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Your career timeline at TAG Solutions
         </p>
       </div>
@@ -78,28 +78,28 @@ export default async function LifecyclePage() {
       <div className="card p-6 mb-8">
         <div className="flex items-start gap-4">
           <div className="p-3 rounded" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-            <Briefcase className="w-8 h-8" style={{ color: 'var(--tag-orange)' }} />
+            <Briefcase className="w-8 h-8" style={{ color: "var(--accent)" }} />
           </div>
           <div className="flex-1">
             <h3 className="text-xl font-light mb-1">{employee.designation || "Employee"}</h3>
-            <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
               {employee.department || "—"}
             </p>
             <div className="flex items-center gap-6">
               {joiningDate && (
                 <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Joined</p>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Joined</p>
                   <p className="text-sm font-normal">{formatDate(joiningDate)}</p>
                 </div>
               )}
               {tenure && (
                 <div>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Tenure</p>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Tenure</p>
                   <p className="text-sm font-normal">{tenure}</p>
                 </div>
               )}
               <div>
-                <p className="text-xs" style={{ color: 'var(--tag-label)' }}>Milestones</p>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Milestones</p>
                 <p className="text-sm font-normal tabular-nums">{events?.length || 0}</p>
               </div>
             </div>

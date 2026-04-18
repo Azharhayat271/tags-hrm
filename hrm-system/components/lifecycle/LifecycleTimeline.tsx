@@ -38,7 +38,7 @@ export default function LifecycleTimeline({ events }: LifecycleTimelineProps) {
       <div className="card p-6">
         <div className="text-center py-12">
           <Briefcase className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No lifecycle events recorded yet
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function LifecycleTimeline({ events }: LifecycleTimelineProps) {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <h4 className="text-base font-normal mb-1">{config.title}</h4>
-                      <p className="text-xs tabular-nums" style={{ color: 'var(--tag-label)' }}>
+                      <p className="text-xs tabular-nums" style={{ color: "var(--text-secondary)" }}>
                         {formatDate(event.event_date)}
                       </p>
                     </div>
@@ -102,21 +102,21 @@ export default function LifecycleTimeline({ events }: LifecycleTimelineProps) {
                   </div>
 
                   {event.description && (
-                    <p className="text-sm mb-3" style={{ color: 'var(--tag-body)' }}>
+                    <p className="text-sm mb-3" style={{ color: "var(--text-tertiary)" }}>
                       {event.description}
                     </p>
                   )}
 
                   {/* Metadata */}
                   {event.metadata && Object.keys(event.metadata).length > 0 && (
-                    <div className="mb-3 p-3 rounded" style={{ backgroundColor: 'var(--tag-bg-warm)' }}>
+                    <div className="mb-3 p-3 rounded" style={{ backgroundColor: "var(--surface-muted)" }}>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {Object.entries(event.metadata).map(([key, value]) => (
                           <div key={key}>
-                            <span className="text-xs" style={{ color: 'var(--tag-label)' }}>
+                            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
                               {formatMetadataKey(key)}:
                             </span>
-                            <span className="ml-2" style={{ color: 'var(--tag-body)' }}>
+                            <span className="ml-2" style={{ color: "var(--text-tertiary)" }}>
                               {String(value)}
                             </span>
                           </div>
@@ -125,7 +125,7 @@ export default function LifecycleTimeline({ events }: LifecycleTimelineProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between text-xs" style={{ color: 'var(--tag-label)' }}>
+                  <div className="flex items-center justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
                     <span>Added by {event.added_by_profile?.full_name || "System"}</span>
                     <span className="tabular-nums">{formatDate(event.created_at)}</span>
                   </div>

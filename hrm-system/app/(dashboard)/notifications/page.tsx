@@ -128,10 +128,10 @@ export default async function NotificationsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Notifications
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Stay updated with your latest activities
         </p>
       </div>
@@ -139,7 +139,7 @@ export default async function NotificationsPage() {
       {notifications.length === 0 ? (
         <div className="card p-12 text-center">
           <Bell className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No notifications yet
           </p>
         </div>
@@ -182,10 +182,10 @@ export default async function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-normal mb-1">{notification.title}</h3>
-                    <p className="text-sm mb-2" style={{ color: 'var(--tag-body)' }}>
+                    <p className="text-sm mb-2" style={{ color: "var(--text-tertiary)" }}>
                       {notification.message}
                     </p>
-                    <p className="text-xs" style={{ color: 'var(--tag-label)' }}>
+                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                       {formatDate(notification.date)}
                     </p>
                   </div>

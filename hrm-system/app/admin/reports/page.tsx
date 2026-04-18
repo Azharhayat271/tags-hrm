@@ -65,10 +65,10 @@ export default async function ReportsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Reports & Analytics
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Generate and export comprehensive reports
         </p>
       </div>
@@ -77,9 +77,9 @@ export default async function ReportsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="card p-6">
           <div className="flex items-start gap-3">
-            <Users className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+            <Users className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Active Employees
               </p>
               <p className="text-2xl font-light tabular-nums">{totalEmployees || 0}</p>
@@ -91,13 +91,13 @@ export default async function ReportsPage() {
           <div className="flex items-start gap-3">
             <Calendar className="w-5 h-5" style={{ color: 'var(--tag-success)' }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Attendance Records
               </p>
               <p className="text-2xl font-light tabular-nums">{attendanceRecords || 0}</p>
             </div>
           </div>
-          <p className="text-xs mt-2" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
             This month
           </p>
         </div>
@@ -106,7 +106,7 @@ export default async function ReportsPage() {
           <div className="flex items-start gap-3">
             <FileText className="w-5 h-5" style={{ color: 'var(--tag-warning)' }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Pending Leaves
               </p>
               <p className="text-2xl font-light tabular-nums">{pendingLeaves || 0}</p>
@@ -116,15 +116,15 @@ export default async function ReportsPage() {
 
         <div className="card p-6">
           <div className="flex items-start gap-3">
-            <TrendingUp className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+            <TrendingUp className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Reviews
               </p>
               <p className="text-2xl font-light tabular-nums">{reviewsCount || 0}</p>
             </div>
           </div>
-          <p className="text-xs mt-2" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
             {currentCycle}
           </p>
         </div>

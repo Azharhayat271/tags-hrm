@@ -101,7 +101,7 @@ export default function LeaveReport() {
           <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
             Leave Report
           </h3>
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Export leave requests with filters
           </p>
         </div>
@@ -110,7 +110,7 @@ export default function LeaveReport() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             Start Date
           </label>
           <input
@@ -127,7 +127,7 @@ export default function LeaveReport() {
         </div>
 
         <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             End Date
           </label>
           <input
@@ -144,7 +144,7 @@ export default function LeaveReport() {
         </div>
 
         <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             Status
           </label>
           <select

@@ -56,17 +56,17 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         <Link
           href="/admin/employees"
           className="inline-flex items-center gap-2 text-sm mb-4 hover:underline"
-          style={{ color: "var(--tag-orange)" }}
+          style={{ color: "var(--accent)" }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Employees
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 style={{ fontSize: "2rem", lineHeight: "1.1", letterSpacing: "-0.64px" }}>
+            <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
               {employee.profiles?.full_name}
             </h1>
-            <p className="text-sm mt-2" style={{ color: "var(--tag-body)" }}>
+            <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
               {employee.designation?.name || "Employee"}
             </p>
           </div>
@@ -131,9 +131,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
           </h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <Mail className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <Mail className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Email
                 </p>
                 <p className="text-sm font-light">{employee.profiles?.email}</p>
@@ -141,9 +141,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
             {employee.profiles?.phone && (
               <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+                <Phone className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
                 <div>
-                  <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                     Phone
                   </p>
                   <p className="text-sm font-light">{employee.profiles.phone}</p>
@@ -160,9 +160,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="flex items-start gap-3">
-              <Briefcase className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <Briefcase className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Designation
                 </p>
                 <p className="text-sm font-light">{employee.designation?.name || "—"}</p>
@@ -170,9 +170,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <Building className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <Building className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Department
                 </p>
                 <p className="text-sm font-light">{employee.department?.name || "—"}</p>
@@ -180,9 +180,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Joining Date
                 </p>
                 <p className="text-sm font-light">
@@ -192,9 +192,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <User className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <User className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Reports To
                 </p>
                 <p className="text-sm font-light">
@@ -204,9 +204,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <Briefcase className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+              <Briefcase className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
               <div>
-                <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Employment Type
                 </p>
                 <p className="text-sm font-light capitalize">
@@ -217,9 +217,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
             {employee.joining_date && (
               <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--tag-orange)" }} />
+                <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
                 <div>
-                  <p className="text-xs" style={{ color: "var(--tag-label)" }}>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                     Tenure
                   </p>
                   <p className="text-sm font-light">{calculateTenure(employee.joining_date)}</p>

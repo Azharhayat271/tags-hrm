@@ -19,7 +19,7 @@ export default function SessionsList({ sessions }: SessionsListProps) {
     return (
       <div className="text-center py-8">
         <Clock className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-        <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
           No sessions today
         </p>
       </div>
@@ -47,7 +47,7 @@ export default function SessionsList({ sessions }: SessionsListProps) {
             style={{ borderColor: 'var(--tag-border)', backgroundColor: checkOut ? 'var(--tag-bg)' : 'var(--tag-success-bg)' }}
           >
             <div className="flex items-start justify-between mb-2">
-              <span className="text-xs font-medium" style={{ color: 'var(--tag-label)' }}>
+              <span className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
                 {session.is_manual_entry ? 'Manual Entry' : 'Session'} {!session.is_manual_entry && sessions.length - index}
               </span>
               <div className="flex gap-2 items-center">
@@ -66,13 +66,13 @@ export default function SessionsList({ sessions }: SessionsListProps) {
             
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>Check In</p>
+                <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>Check In</p>
                 <p className="tabular-nums">
                   {checkIn.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               <div>
-                <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>Check Out</p>
+                <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>Check Out</p>
                 <p className="tabular-nums">
                   {checkOut ? checkOut.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
                 </p>
@@ -80,8 +80,8 @@ export default function SessionsList({ sessions }: SessionsListProps) {
             </div>
             
             {duration && (
-              <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--tag-border)' }}>
-                <p className="text-xs" style={{ color: 'var(--tag-label)' }}>
+              <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Duration: <span className="font-medium">{duration}</span>
                 </p>
               </div>

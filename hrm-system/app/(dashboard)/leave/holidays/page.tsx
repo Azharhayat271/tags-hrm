@@ -34,15 +34,15 @@ export default async function PublicHolidaysPage() {
         <Link
           href="/leave"
           className="inline-flex items-center gap-2 text-sm mb-4 hover:underline"
-          style={{ color: "var(--tag-orange)" }}
+          style={{ color: "var(--accent)" }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Leave
         </Link>
-        <h1 style={{ fontSize: "2rem", lineHeight: "1.1", letterSpacing: "-0.64px" }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Public Holidays
         </h1>
-        <p className="text-sm mt-2" style={{ color: "var(--tag-body)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           View all public holidays for {currentYear}
         </p>
       </div>
@@ -57,7 +57,7 @@ export default async function PublicHolidaysPage() {
           {upcomingHolidays.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-              <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
                 No upcoming holidays
               </p>
             </div>
@@ -69,10 +69,10 @@ export default async function PublicHolidaysPage() {
                   className="flex items-start gap-3 p-4 rounded"
                   style={{ backgroundColor: 'rgba(249,115,22,0.08)' }}
                 >
-                  <Calendar className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-orange)' }} />
+                  <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--accent)" }} />
                   <div className="flex-1">
                     <p className="text-base font-normal">{holiday.name}</p>
-                    <p className="text-sm tabular-nums" style={{ color: 'var(--tag-body)' }}>
+                    <p className="text-sm tabular-nums" style={{ color: "var(--text-tertiary)" }}>
                       {formatDate(holiday.date)}
                     </p>
                   </div>
@@ -91,7 +91,7 @@ export default async function PublicHolidaysPage() {
           {pastHolidays.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-              <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+              <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
                 No past holidays this year
               </p>
             </div>
@@ -101,14 +101,14 @@ export default async function PublicHolidaysPage() {
                 <div
                   key={holiday.id}
                   className="flex items-start gap-3 p-4 rounded"
-                  style={{ backgroundColor: 'var(--tag-bg-warm)' }}
+                  style={{ backgroundColor: "var(--surface-muted)" }}
                 >
-                  <Calendar className="w-5 h-5 mt-0.5" style={{ color: 'var(--tag-body)' }} />
+                  <Calendar className="w-5 h-5 mt-0.5" style={{ color: "var(--text-tertiary)" }} />
                   <div className="flex-1">
-                    <p className="text-base font-normal" style={{ color: 'var(--tag-body)' }}>
+                    <p className="text-base font-normal" style={{ color: "var(--text-tertiary)" }}>
                       {holiday.name}
                     </p>
-                    <p className="text-sm tabular-nums" style={{ color: 'var(--tag-body)' }}>
+                    <p className="text-sm tabular-nums" style={{ color: "var(--text-tertiary)" }}>
                       {formatDate(holiday.date)}
                     </p>
                   </div>
@@ -123,10 +123,10 @@ export default async function PublicHolidaysPage() {
       <div className="card p-6 mt-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm" style={{ color: 'var(--tag-label)' }}>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Total Public Holidays in {currentYear}
             </p>
-            <p className="text-3xl font-light tabular-nums mt-1" style={{ color: 'var(--tag-orange)' }}>
+            <p className="text-3xl font-light tabular-nums mt-1" style={{ color: "var(--accent)" }}>
               {currentHolidays.length}
             </p>
           </div>

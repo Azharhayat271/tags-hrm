@@ -49,15 +49,15 @@ export default async function AddKPIPage({ params }: PageProps) {
         <Link
           href={`/admin/employees/${id}/kpi`}
           className="inline-flex items-center gap-2 text-sm mb-4 hover:underline"
-          style={{ color: "var(--tag-orange)" }}
+          style={{ color: "var(--accent)" }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to KPIs
         </Link>
-        <h1 style={{ fontSize: "2rem", lineHeight: "1.1", letterSpacing: "-0.64px" }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Add KPI
         </h1>
-        <p className="text-sm mt-2" style={{ color: "var(--tag-body)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Set a new goal for {employee.profiles?.full_name}
         </p>
       </div>

@@ -148,7 +148,7 @@ export default function PublicHolidaysManager({ holidays }: PublicHolidaysManage
         <div className="card p-6">
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-            <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
               No holidays configured yet
             </p>
           </div>
@@ -165,13 +165,13 @@ export default function PublicHolidaysManager({ holidays }: PublicHolidaysManage
                 <div
                   key={holiday.id}
                   className="flex items-center justify-between p-4 rounded border"
-                  style={{ borderColor: 'var(--tag-border)' }}
+                  style={{ borderColor: "var(--border-subtle)" }}
                 >
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+                    <Calendar className="w-5 h-5" style={{ color: "var(--accent)" }} />
                     <div>
                       <h4 className="text-base font-normal">{holiday.name}</h4>
-                      <p className="text-sm tabular-nums" style={{ color: 'var(--tag-body)' }}>
+                      <p className="text-sm tabular-nums" style={{ color: "var(--text-tertiary)" }}>
                         {formatDate(holiday.date)}
                       </p>
                     </div>

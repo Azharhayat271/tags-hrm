@@ -23,7 +23,7 @@ export default function LeaveBalance({ balances }: LeaveBalanceProps) {
         </h3>
         <div className="text-center py-8">
           <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No leave types configured
           </p>
         </div>
@@ -46,15 +46,15 @@ export default function LeaveBalance({ balances }: LeaveBalanceProps) {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-sm font-normal">{balance.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+                  <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
                     {balance.used} used of {balance.days_per_year} days
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-light tabular-nums" style={{ color: 'var(--tag-orange)' }}>
+                  <p className="text-xl font-light tabular-nums" style={{ color: "var(--accent)" }}>
                     {balance.remaining}
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--tag-label)' }}>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                     days left
                   </p>
                 </div>
@@ -79,8 +79,8 @@ export default function LeaveBalance({ balances }: LeaveBalanceProps) {
         })}
       </div>
 
-      <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--tag-border)' }}>
-        <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+      <div className="mt-6 pt-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+        <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
           Leave balances are calculated for the current year ({new Date().getFullYear()})
         </p>
       </div>

@@ -22,10 +22,10 @@ export default async function KPIPage() {
   if (!employee) {
     return (
       <div>
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           KPI & Performance
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Employee record not found
         </p>
       </div>
@@ -68,10 +68,10 @@ export default async function KPIPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           KPI & Performance
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Track your goals and performance reviews
         </p>
       </div>
@@ -80,15 +80,15 @@ export default async function KPIPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="card p-6">
           <div className="flex items-start gap-3 mb-3">
-            <Target className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+            <Target className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <div className="flex-1">
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Active KPIs
               </p>
               <p className="text-2xl font-light tabular-nums">{kpis?.length || 0}</p>
             </div>
           </div>
-          <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
             {currentCycle}
           </p>
         </div>
@@ -97,7 +97,7 @@ export default async function KPIPage() {
           <div className="flex items-start gap-3 mb-3">
             <TrendingUp className="w-5 h-5" style={{ color: 'var(--tag-success)' }} />
             <div className="flex-1">
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Overall Progress
               </p>
               <p className="text-2xl font-light tabular-nums">{overallProgress}%</p>
@@ -116,15 +116,15 @@ export default async function KPIPage() {
 
         <div className="card p-6">
           <div className="flex items-start gap-3 mb-3">
-            <Award className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+            <Award className="w-5 h-5" style={{ color: "var(--accent)" }} />
             <div className="flex-1">
-              <p className="text-xs mb-1" style={{ color: 'var(--tag-label)' }}>
+              <p className="text-xs mb-1" style={{ color: "var(--text-secondary)" }}>
                 Reviews
               </p>
               <p className="text-2xl font-light tabular-nums">{reviews?.length || 0}</p>
             </div>
           </div>
-          <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
             Total completed
           </p>
         </div>

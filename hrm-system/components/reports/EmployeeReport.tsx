@@ -126,16 +126,16 @@ export default function EmployeeReport() {
           <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
             Employee Report
           </h3>
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Export complete employee directory with filters
           </p>
         </div>
-        <Users className="w-5 h-5" style={{ color: 'var(--tag-orange)' }} />
+        <Users className="w-5 h-5" style={{ color: "var(--accent)" }} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             Status
           </label>
           <select
@@ -156,7 +156,7 @@ export default function EmployeeReport() {
         </div>
 
         <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--tag-label)' }}>
+          <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
             Department
           </label>
           <select

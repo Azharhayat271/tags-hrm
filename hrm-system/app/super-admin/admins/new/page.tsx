@@ -33,17 +33,17 @@ export default async function NewAdminPage() {
       <Link
         href="/super-admin/admins"
         className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-70 transition-opacity"
-        style={{ color: 'var(--tag-orange)' }}
+        style={{ color: "var(--accent)" }}
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Admins
       </Link>
 
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Add New Admin
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Create a new admin account with access to the system
         </p>
       </div>
@@ -55,13 +55,13 @@ export default async function NewAdminPage() {
 
         <div className="card p-6">
           <h3 className="text-base font-normal mb-4">About Admin Roles</h3>
-          <div className="space-y-4 text-sm" style={{ color: 'var(--tag-body)' }}>
+          <div className="space-y-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
             <div>
-              <p className="font-normal mb-1" style={{ color: 'var(--tag-label)' }}>Admin</p>
+              <p className="font-normal mb-1" style={{ color: "var(--text-secondary)" }}>Admin</p>
               <p>Can manage employees, approve leaves, upload payroll, and view reports.</p>
             </div>
             <div>
-              <p className="font-normal mb-1" style={{ color: 'var(--tag-label)' }}>Super Admin</p>
+              <p className="font-normal mb-1" style={{ color: "var(--text-secondary)" }}>Super Admin</p>
               <p>Full system access including admin management, settings, and all employee data.</p>
             </div>
           </div>

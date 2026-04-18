@@ -157,7 +157,7 @@ export default function LeaveTypesManager({ leaveTypes }: LeaveTypesManagerProps
         {leaveTypes.length === 0 ? (
           <div className="text-center py-12">
             <Briefcase className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-            <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
               No leave types configured yet
             </p>
           </div>
@@ -167,11 +167,11 @@ export default function LeaveTypesManager({ leaveTypes }: LeaveTypesManagerProps
               <div
                 key={type.id}
                 className="flex items-center justify-between p-4 rounded border"
-                style={{ borderColor: 'var(--tag-border)' }}
+                style={{ borderColor: "var(--border-subtle)" }}
               >
                 <div className="flex-1">
                   <h4 className="text-base font-normal mb-1">{type.name}</h4>
-                  <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--tag-body)' }}>
+                  <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-tertiary)" }}>
                     <span className="tabular-nums">{type.days_per_year} days/year</span>
                     <span className="tabular-nums">
                       Carry forward: {type.carry_forward_limit} days

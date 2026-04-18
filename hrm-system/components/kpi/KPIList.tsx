@@ -23,7 +23,7 @@ export default function KPIList({ kpis }: KPIListProps) {
       <div className="card p-6">
         <div className="text-center py-12">
           <Target className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No KPIs assigned for this cycle
           </p>
         </div>
@@ -49,7 +49,7 @@ export default function KPIList({ kpis }: KPIListProps) {
                   </span>
                 </div>
                 {kpi.description && (
-                  <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+                  <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
                     {kpi.description}
                   </p>
                 )}
@@ -58,7 +58,7 @@ export default function KPIList({ kpis }: KPIListProps) {
                 <p className="text-2xl font-light tabular-nums" style={{ color: isExceeding ? 'var(--tag-success)' : 'var(--tag-orange)' }}>
                   {progressPercentage}%
                 </p>
-                <p className="text-xs" style={{ color: 'var(--tag-label)' }}>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                   Progress
                 </p>
               </div>
@@ -86,8 +86,8 @@ export default function KPIList({ kpis }: KPIListProps) {
               <div className="flex items-center gap-4">
                 {kpi.target && (
                   <div className="flex items-center gap-1">
-                    <Target className="w-4 h-4" style={{ color: 'var(--tag-label)' }} />
-                    <span style={{ color: 'var(--tag-body)' }}>
+                    <Target className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
+                    <span style={{ color: "var(--text-tertiary)" }}>
                       Target: {kpi.target} {kpi.unit || ''}
                     </span>
                   </div>

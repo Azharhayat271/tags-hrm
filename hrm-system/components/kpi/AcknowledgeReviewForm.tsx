@@ -44,12 +44,12 @@ export default function AcknowledgeReviewForm({ reviewId }: AcknowledgeReviewFor
   return (
     <form onSubmit={handleSubmit} className="card p-6">
       <div className="flex items-start gap-3 mb-6">
-        <CheckCircle className="w-5 h-5 mt-1" style={{ color: 'var(--tag-orange)' }} />
+        <CheckCircle className="w-5 h-5 mt-1" style={{ color: "var(--accent)" }} />
         <div>
           <h3 className="text-lg font-light mb-1" style={{ letterSpacing: '-0.22px' }}>
             Your Comments
           </h3>
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Add your thoughts or reflections about this review (optional)
           </p>
         </div>

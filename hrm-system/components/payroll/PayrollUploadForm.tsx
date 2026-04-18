@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApiCall } from "@/lib/hooks/client";
-import { Upload, Loader2, FileText, CheckCircle } from "lucide-react";
+import { Upload, FileText, X, CheckCircle2 } from "lucide-react";
+import {
+  Button,
+  Field,
+  Select,
+  FormError,
+  FormSection,
+  FormActions,
+  useToast,
+  cn,
+} from "@/components/ui";
 
 interface Employee {
   id: string;
@@ -18,13 +28,19 @@ interface PayrollUploadFormProps {
   adminId: string;
 }
 
-export default function PayrollUploadForm({ employees, adminId }: PayrollUploadFormProps) {
+const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
+export default function PayrollUploadForm({ employees }: PayrollUploadFormProps) {
   const router = useRouter();
   const { callApi } = useApiCall();
+  const toast = useToast();
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const [formData, setFormData] = useState({
     employee_id: "",
@@ -32,263 +48,272 @@ export default function PayrollUploadForm({ employees, adminId }: PayrollUploadF
     year: new Date().getFullYear(),
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        setError("Please select a PDF file");
-        setSelectedFile(null);
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        setError("File size must be less than 10MB");
-        setSelectedFile(null);
-        return;
-      }
-      setSelectedFile(file);
-      setError(null);
+  const validateAndSet = useCallback((file: File | undefined | null) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      setError("Please select a PDF file.");
+      setSelectedFile(null);
+      return;
     }
+    if (file.size > MAX_SIZE_BYTES) {
+      setError("File size must be less than 10 MB.");
+      setSelectedFile(null);
+      return;
+    }
+    setError(null);
+    setSelectedFile(file);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    validateAndSet(e.dataTransfer.files?.[0]);
+  }, [validateAndSet]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragActive) setDragActive(true);
+  }, [dragActive]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  }, []);
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!selectedFile) {
-      setError("Please select a PDF file");
+      setError("Please select a PDF file.");
       return;
     }
 
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("file", selectedFile);
-      formDataToSend.append("employee_id", formData.employee_id);
-      formDataToSend.append("month", formData.month.toString());
-      formDataToSend.append("year", formData.year.toString());
+      const fd = new FormData();
+      fd.append("file", selectedFile);
+      fd.append("employee_id", formData.employee_id);
+      fd.append("month", formData.month.toString());
+      fd.append("year", formData.year.toString());
 
       const { error: uploadError } = await callApi("/api/payroll/upload-slip", {
         method: "POST",
-        body: formDataToSend,
+        body: fd,
       });
 
       if (uploadError) throw new Error(uploadError);
 
-      // Success
-      setSuccess(true);
-      setSelectedFile(null);
-      setFormData({
-        employee_id: "",
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear(),
-      });
-      
-      // Reset file input
-      const fileInput = document.getElementById("file") as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
+      const employee = employees.find((emp) => emp.id === formData.employee_id);
+      toast.success(
+        "Salary slip uploaded",
+        employee
+          ? `Sent to ${employee.profiles?.full_name ?? "employee"} for ${monthName(formData.month)} ${formData.year}.`
+          : undefined,
+      );
 
+      clearFile();
+      setFormData((prev) => ({ ...prev, employee_id: "" }));
       router.refresh();
-
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to upload salary slip");
+      toast.error("Upload failed", err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
-  const months = [
-    { value: 1, label: "January" },
-    { value: 2, label: "February" },
-    { value: 3, label: "March" },
-    { value: 4, label: "April" },
-    { value: 5, label: "May" },
-    { value: 6, label: "June" },
-    { value: 7, label: "July" },
-    { value: 8, label: "August" },
-    { value: 9, label: "September" },
-    { value: 10, label: "October" },
-    { value: 11, label: "November" },
-    { value: 12, label: "December" },
-  ];
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   return (
-    <div className="card p-6">
-      <h3 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
-        Upload Salary Slip
-      </h3>
+    <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+      <div className="px-6 pt-5 pb-1">
+        <span className="eyebrow">Payroll</span>
+        <h2 className="text-[1.25rem] font-light tracking-[-0.015em] text-ink-primary mt-0.5">
+          Upload salary slip
+        </h2>
+        <p className="text-[13px] text-ink-tertiary mt-1 leading-relaxed">
+          Attach a PDF payslip, pick the employee and period, and send it to their profile.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
         {error && (
-          <div
-            className="text-sm p-3 rounded flex items-start gap-2"
-            style={{
-              backgroundColor: "var(--tag-danger-bg)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "var(--tag-danger)",
-            }}
-          >
-            {error}
+          <div className="px-6 pt-4">
+            <FormError>{error}</FormError>
           </div>
         )}
 
-        {success && (
-          <div
-            className="text-sm p-3 rounded flex items-center gap-2"
-            style={{
-              backgroundColor: "var(--tag-success-bg)",
-              border: "1px solid var(--tag-success-border)",
-              color: "var(--tag-success)",
-            }}
+        <div className="px-6 divide-y divide-line-subtle">
+          <FormSection
+            eyebrow="Recipient"
+            title="Who is this for?"
+            description="Choose the employee and the payslip's month + year."
           >
-            <CheckCircle className="w-4 h-4" />
-            Salary slip uploaded successfully!
-          </div>
-        )}
+            <Field label="Employee" required>
+              {({ id, invalid }) => (
+                <Select
+                  id={id}
+                  name="employee_id"
+                  value={formData.employee_id}
+                  onChange={handleChange}
+                  required
+                  invalid={invalid}
+                >
+                  <option value="">Select an employee…</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.profiles?.full_name} · {emp.profiles?.email}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Month" required>
+                {({ id }) => (
+                  <Select id={id} name="month" value={formData.month} onChange={handleChange} required>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {monthName(m)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Year" required>
+                {({ id }) => (
+                  <Select id={id} name="year" value={formData.year} onChange={handleChange} required>
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            </div>
+          </FormSection>
 
-        <div>
-          <label htmlFor="employee_id" className="label">
-            Employee *
-          </label>
-          <select
-            id="employee_id"
-            name="employee_id"
-            value={formData.employee_id}
-            onChange={handleChange}
-            className="input"
-            required
+          <FormSection
+            eyebrow="File"
+            title="Payslip PDF"
+            description="Drag the file onto the drop zone or click to browse. PDF only, up to 10 MB."
           >
-            <option value="">Select employee</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.profiles?.full_name} ({emp.profiles?.email})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="month" className="label">
-              Month *
-            </label>
-            <select
-              id="month"
-              name="month"
-              value={formData.month}
-              onChange={handleChange}
-              className="input"
-              required
-            >
-              {months.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="year" className="label">
-              Year *
-            </label>
-            <select
-              id="year"
-              name="year"
-              value={formData.year}
-              onChange={handleChange}
-              className="input"
-              required
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="file" className="label">
-            PDF File *
-          </label>
-          <div className="mt-1">
             <label
-              htmlFor="file"
-              className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed rounded cursor-pointer hover:border-orange-300 transition-colors"
-              style={{ borderColor: selectedFile ? 'var(--tag-orange)' : 'var(--tag-border-dashed)' }}
+              htmlFor="payroll-file"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-3 py-10 px-6 rounded-sm",
+                "border border-dashed cursor-pointer text-center",
+                "transition-[border-color,background-color] duration-base ease-out-expo",
+                selectedFile
+                  ? "border-[var(--accent-wash)] bg-accent-tint/40"
+                  : dragActive
+                  ? "border-accent bg-accent-tint/60"
+                  : "border-line hover:border-line-strong hover:bg-surface-muted",
+              )}
             >
               {selectedFile ? (
                 <>
-                  <FileText className="w-6 h-6" style={{ color: 'var(--tag-orange)' }} />
-                  <div className="text-center">
-                    <p className="text-sm font-normal">{selectedFile.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
-                      {(selectedFile.size / 1024).toFixed(2)} KB
+                  <span className="inline-flex items-center justify-center w-11 h-11 rounded-sm bg-surface-raised border border-line-subtle shadow-e1">
+                    <FileText className="w-5 h-5 text-ink-accent" strokeWidth={1.75} />
+                  </span>
+                  <div className="min-w-0 max-w-full">
+                    <p className="text-[13px] text-ink-primary truncate font-medium">
+                      {selectedFile.name}
                     </p>
+                    <p className="text-[11px] text-ink-tertiary font-mono tabular-nums mt-1">
+                      {formatBytes(selectedFile.size)} · PDF
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--success-text)]">
+                      <CheckCircle2 className="w-3 h-3" strokeWidth={2} />
+                      Ready to upload
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        clearFile();
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1 text-[11px] text-ink-tertiary",
+                        "hover:text-[var(--danger-text)] transition-colors",
+                      )}
+                    >
+                      <X className="w-3 h-3" strokeWidth={2} />
+                      Remove
+                    </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <Upload className="w-6 h-6" style={{ color: 'var(--tag-body)' }} />
-                  <div className="text-center">
-                    <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
-                      Click to upload or drag and drop
+                  <span className="inline-flex items-center justify-center w-11 h-11 rounded-sm bg-surface-sunken border border-line-subtle text-ink-tertiary">
+                    <Upload className="w-5 h-5" strokeWidth={1.75} />
+                  </span>
+                  <div>
+                    <p className="text-[13px] text-ink-primary">
+                      {dragActive ? "Drop it here" : "Drop a PDF or click to browse"}
                     </p>
-                    <p className="text-xs" style={{ color: 'var(--tag-body)' }}>
-                      PDF files only (max 10MB)
+                    <p className="text-[11px] text-ink-tertiary mt-1 font-mono tabular-nums">
+                      PDF only · max 10 MB
                     </p>
                   </div>
                 </>
               )}
+              <input
+                ref={inputRef}
+                id="payroll-file"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => validateAndSet(e.target.files?.[0])}
+                className="sr-only"
+                required
+              />
             </label>
-            <input
-              id="file"
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileChange}
-              className="hidden"
-              required
-            />
-          </div>
+          </FormSection>
         </div>
 
-        <div className="pt-4 border-t" style={{ borderColor: "var(--tag-border)" }}>
-          <button
-            type="submit"
-            disabled={loading || !selectedFile}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Upload Salary Slip
-              </>
-            )}
-          </button>
-        </div>
+        <FormActions align="split" className="px-6 py-4 bg-surface-muted mt-0 border-t-0">
+          <span className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+            Files are stored privately and linked to the selected employee only.
+          </span>
+          <Button type="submit" disabled={!selectedFile} loading={loading}>
+            {loading ? "Uploading…" : "Upload salary slip"}
+          </Button>
+        </FormActions>
       </form>
     </div>
   );
+}
+
+function monthName(m: number): string {
+  return [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ][Math.max(0, Math.min(11, m - 1))];
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }

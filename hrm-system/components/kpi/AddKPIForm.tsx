@@ -3,7 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2 } from "lucide-react";
+import {
+  Button,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  FormError,
+  FormSection,
+  FormActions,
+  useToast,
+} from "@/components/ui";
 
 interface AddKPIFormProps {
   employeeId: string;
@@ -12,10 +22,11 @@ interface AddKPIFormProps {
 export default function AddKPIForm({ employeeId }: AddKPIFormProps) {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get current cycle
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
@@ -37,40 +48,36 @@ export default function AddKPIForm({ employeeId }: AddKPIFormProps) {
     setError(null);
 
     try {
-      const { error: insertError } = await supabase
-        .from("kpis")
-        .insert({
-          employee_id: employeeId,
-          cycle: formData.cycle,
-          title: formData.title,
-          description: formData.description || null,
-          target: formData.target ? parseFloat(formData.target) : null,
-          unit: formData.unit || null,
-          weight: parseFloat(formData.weight),
-          progress: parseFloat(formData.progress),
-        });
+      const { error: insertError } = await supabase.from("kpis").insert({
+        employee_id: employeeId,
+        cycle: formData.cycle,
+        title: formData.title,
+        description: formData.description || null,
+        target: formData.target ? parseFloat(formData.target) : null,
+        unit: formData.unit || null,
+        weight: parseFloat(formData.weight),
+        progress: parseFloat(formData.progress),
+      });
 
       if (insertError) throw insertError;
 
+      toast.success("KPI added", `"${formData.title}" targeted for ${formData.cycle}.`);
       router.push(`/admin/employees/${employeeId}/kpi`);
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Failed to add KPI");
+      toast.error("Could not add KPI", err.message);
       setLoading(false);
     }
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Generate cycle options
-  const cycles = [];
+  const cycles: string[] = [];
   for (let i = 0; i < 4; i++) {
     const year = currentYear + Math.floor(i / 4);
     const quarter = ((currentQuarter - 1 + i) % 4) + 1;
@@ -78,160 +85,161 @@ export default function AddKPIForm({ employeeId }: AddKPIFormProps) {
   }
 
   return (
-    <div className="card p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+      <form onSubmit={handleSubmit}>
         {error && (
-          <div
-            className="text-sm p-3 rounded"
-            style={{
-              backgroundColor: "var(--tag-danger-bg)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "var(--tag-danger)",
-            }}
-          >
-            {error}
+          <div className="px-6 pt-5">
+            <FormError>{error}</FormError>
           </div>
         )}
 
-        <div>
-          <label htmlFor="cycle" className="label">
-            Review Cycle *
-          </label>
-          <select
-            id="cycle"
-            name="cycle"
-            value={formData.cycle}
-            onChange={handleChange}
-            className="input"
-            required
+        <div className="px-6 divide-y divide-line-subtle">
+          <FormSection
+            eyebrow="Period"
+            title="Review cycle"
+            description="Which quarter does this KPI belong to?"
           >
-            {cycles.map((cycle) => (
-              <option key={cycle} value={cycle}>
-                {cycle}
-              </option>
-            ))}
-          </select>
-        </div>
+            <Field label="Review cycle" required>
+              {({ id, invalid }) => (
+                <Select
+                  id={id}
+                  name="cycle"
+                  value={formData.cycle}
+                  onChange={handleChange}
+                  required
+                  invalid={invalid}
+                >
+                  {cycles.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </FormSection>
 
-        <div>
-          <label htmlFor="title" className="label">
-            KPI Title *
-          </label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            value={formData.title}
-            onChange={handleChange}
-            className="input"
-            placeholder="e.g. Complete 10 client projects"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="description" className="label">
-            Description
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="input"
-            rows={3}
-            placeholder="Provide details about this KPI..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="target" className="label">
-              Target Value
-            </label>
-            <input
-              id="target"
-              name="target"
-              type="number"
-              step="0.01"
-              value={formData.target}
-              onChange={handleChange}
-              className="input"
-              placeholder="e.g. 100"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="unit" className="label">
-              Unit
-            </label>
-            <input
-              id="unit"
-              name="unit"
-              type="text"
-              value={formData.unit}
-              onChange={handleChange}
-              className="input"
-              placeholder="e.g. projects, %, $"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="weight" className="label">
-              Weight *
-            </label>
-            <input
-              id="weight"
-              name="weight"
-              type="number"
-              step="0.1"
-              min="0.1"
-              value={formData.weight}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-            <p className="text-xs mt-1" style={{ color: 'var(--tag-body)' }}>
-              How important is this KPI? (1 = normal, 2 = double weight)
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="progress" className="label">
-              Initial Progress (%)
-            </label>
-            <input
-              id="progress"
-              name="progress"
-              type="number"
-              min="0"
-              max="100"
-              value={formData.progress}
-              onChange={handleChange}
-              className="input"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--tag-border)" }}>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          <FormSection
+            eyebrow="Definition"
+            title="What's the goal?"
+            description="Keep the title short and outcome-focused. Use the description to clarify scope."
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Adding..." : "Add KPI"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="btn-ghost"
+            <Field label="KPI title" required>
+              {({ id, invalid }) => (
+                <Input
+                  id={id}
+                  name="title"
+                  type="text"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  invalid={invalid}
+                  placeholder="e.g. Complete 10 client projects"
+                />
+              )}
+            </Field>
+            <Field label="Description" optional>
+              {({ id }) => (
+                <Textarea
+                  id={id}
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Why this matters, what counts as complete, any constraints…"
+                />
+              )}
+            </Field>
+          </FormSection>
+
+          <FormSection
+            eyebrow="Measurement"
+            title="How will it be scored?"
+            description="Target + unit define what 100% looks like. Weight controls how much this KPI counts in the overall review."
           >
-            Cancel
-          </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Target value" optional>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    name="target"
+                    type="number"
+                    step="0.01"
+                    value={formData.target}
+                    onChange={handleChange}
+                    placeholder="100"
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+              <Field label="Unit" optional>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    name="unit"
+                    type="text"
+                    value={formData.unit}
+                    onChange={handleChange}
+                    placeholder="projects, %, $"
+                  />
+                )}
+              </Field>
+              <Field
+                label="Weight"
+                required
+                hint="1 = normal, 2 = double weight in the review total."
+              >
+                {({ id, invalid }) => (
+                  <Input
+                    id={id}
+                    name="weight"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={formData.weight}
+                    onChange={handleChange}
+                    required
+                    invalid={invalid}
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+              <Field label="Initial progress (%)" optional>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    name="progress"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.progress}
+                    onChange={handleChange}
+                    className="font-mono tabular-nums"
+                  />
+                )}
+              </Field>
+            </div>
+          </FormSection>
         </div>
+
+        <FormActions align="split" className="px-6 py-4 bg-surface-muted mt-0 border-t-0">
+          <span className="text-[11px] text-ink-tertiary font-mono tabular-nums">
+            Progress can be updated throughout the cycle before the final review.
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => router.back()}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={loading}>
+              {loading ? "Adding…" : "Add KPI"}
+            </Button>
+          </div>
+        </FormActions>
       </form>
     </div>
   );

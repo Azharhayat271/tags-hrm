@@ -73,10 +73,10 @@ export default async function EmployeesPage({
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+          <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
             Employees
           </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+          <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
             Manage employee records and information
           </p>
         </div>

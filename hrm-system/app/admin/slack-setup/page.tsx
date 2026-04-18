@@ -60,10 +60,10 @@ export default async function SlackSetupPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 style={{ fontSize: '2rem', lineHeight: '1.1', letterSpacing: '-0.64px' }}>
+        <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
           Slack Integration
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--tag-body)' }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
           Configure Slack attendance tracking and manage employee mappings
         </p>
       </div>
@@ -112,7 +112,7 @@ export default async function SlackSetupPage() {
         <div className="space-y-4">
           <div>
             <p className="font-medium mb-2">1. Get Correct Slack Bot Token</p>
-            <p className="text-sm mb-2" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm mb-2" style={{ color: "var(--text-tertiary)" }}>
               Go to <a href="https://api.slack.com/apps/A0ASHJ5C3HQ/oauth" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline">Slack OAuth page</a> and copy the "Bot User OAuth Token" (starts with <code>xoxb-</code>)
             </p>
           </div>
@@ -130,7 +130,7 @@ export default async function SlackSetupPage() {
           </div>
           <div>
             <p className="font-medium mb-2">3. Link Employee Accounts</p>
-            <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
               Use the "Auto-Link All" button below if employees use the same email for Slack and HRM.
             </p>
           </div>

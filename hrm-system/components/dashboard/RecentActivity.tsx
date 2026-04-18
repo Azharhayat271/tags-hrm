@@ -1,78 +1,93 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils";
-import { Clock, Calendar, FileText, TrendingUp } from "lucide-react";
+import { Clock, Calendar, TrendingUp, Inbox } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Badge, EmptyState, cn } from "@/components/ui";
 
 interface RecentActivityProps {
   role: string;
   employeeId?: string;
 }
 
+type ActivityStatus = "pending" | "approved" | "rejected" | "acknowledged" | "complete" | "info";
+
+interface Activity {
+  icon: LucideIcon;
+  title: string;
+  status: ActivityStatus;
+  date: string;
+}
+
+const statusVariant: Record<ActivityStatus, Parameters<typeof Badge>[0]["variant"]> = {
+  approved: "success",
+  acknowledged: "success",
+  complete: "success",
+  pending: "warning",
+  rejected: "danger",
+  info: "neutral",
+};
+
+const statusLabel: Record<ActivityStatus, string> = {
+  approved: "Approved",
+  acknowledged: "Acknowledged",
+  complete: "Complete",
+  pending: "Pending",
+  rejected: "Rejected",
+  info: "Event",
+};
+
+function formatRelative(date: string): string {
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffH < 24) return `${diffH}h ago`;
+  if (diffD < 7) return `${diffD}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default async function RecentActivity({ role, employeeId }: RecentActivityProps) {
   const supabase = await createClient();
-  const activities: any[] = [];
+  const activities: Activity[] = [];
 
   if (role === "admin" || role === "super_admin") {
-    // Get recent leave requests
     const { data: leaves } = await supabase
       .from("leave_requests")
-      .select(`
-        id,
-        status,
-        created_at,
-        employees(
-          id,
-          profiles(id, full_name)
-        )
-      `)
+      .select(`id, status, created_at, employees(id, profiles(id, full_name))`)
       .order("created_at", { ascending: false })
       .limit(5);
 
     leaves?.forEach((leave: any) => {
       const employee = leave.employees;
-      const profile = Array.isArray(employee?.profiles)
-        ? employee.profiles[0]
-        : employee?.profiles;
-
+      const profile = Array.isArray(employee?.profiles) ? employee.profiles[0] : employee?.profiles;
       activities.push({
-        type: "leave",
         icon: Calendar,
-        title: `${profile?.full_name || "Unknown"} requested leave`,
-        status: leave.status,
+        title: `${profile?.full_name || "Someone"} requested leave`,
+        status: leave.status as ActivityStatus,
         date: leave.created_at,
       });
     });
 
-    // Get recent lifecycle events
     const { data: events } = await supabase
       .from("lifecycle_events")
-      .select(`
-        id,
-        event_type,
-        created_at,
-        employees(
-          id,
-          profiles(id, full_name)
-        )
-      `)
+      .select(`id, event_type, created_at, employees(id, profiles(id, full_name))`)
       .order("created_at", { ascending: false })
       .limit(3);
 
     events?.forEach((event: any) => {
       const employee = event.employees;
-      const profile = Array.isArray(employee?.profiles)
-        ? employee.profiles[0]
-        : employee?.profiles;
-
+      const profile = Array.isArray(employee?.profiles) ? employee.profiles[0] : employee?.profiles;
       activities.push({
-        type: "lifecycle",
         icon: TrendingUp,
-        title: `${profile?.full_name || "Unknown"} - ${event.event_type}`,
+        title: `${profile?.full_name || "Someone"} · ${event.event_type}`,
         status: "info",
         date: event.created_at,
       });
     });
   } else if (employeeId) {
-    // Get employee's recent activities
     const { data: leaves } = await supabase
       .from("leave_requests")
       .select("*")
@@ -82,15 +97,13 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
 
     leaves?.forEach((leave) => {
       activities.push({
-        type: "leave",
         icon: Calendar,
         title: `Leave request ${leave.status}`,
-        status: leave.status,
+        status: leave.status as ActivityStatus,
         date: leave.created_at,
       });
     });
 
-    // Get recent attendance
     const { data: attendance } = await supabase
       .from("attendance")
       .select("*")
@@ -100,7 +113,6 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
 
     attendance?.forEach((record) => {
       activities.push({
-        type: "attendance",
         icon: Clock,
         title: `Checked ${record.check_out ? "in and out" : "in"}`,
         status: "complete",
@@ -108,7 +120,6 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
       });
     });
 
-    // Get recent reviews
     const { data: reviews } = await supabase
       .from("performance_reviews")
       .select("*")
@@ -118,70 +129,79 @@ export default async function RecentActivity({ role, employeeId }: RecentActivit
 
     reviews?.forEach((review) => {
       activities.push({
-        type: "review",
         icon: TrendingUp,
-        title: `Performance review - ${review.cycle}`,
+        title: `Performance review · ${review.cycle}`,
         status: review.acknowledged_at ? "acknowledged" : "pending",
         date: review.created_at,
       });
     });
   }
 
-  // Sort by date
   activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const visible = activities.slice(0, 8);
 
   return (
-    <div className="card p-6">
-      <h3 className="text-lg font-light mb-4" style={{ letterSpacing: '-0.22px' }}>
-        Recent Activity
-      </h3>
+    <div className="rounded-md border border-line-subtle bg-surface-raised shadow-e1 overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-line-subtle flex items-center justify-between">
+        <div>
+          <span className="eyebrow">Timeline</span>
+          <h3 className="text-[15px] font-normal text-ink-primary mt-0.5">Recent activity</h3>
+        </div>
+        <span className="text-[11px] text-ink-quaternary font-mono tabular-nums">
+          {visible.length} {visible.length === 1 ? "event" : "events"}
+        </span>
+      </div>
 
-      {activities.length === 0 ? (
-        <div className="text-center py-12">
-          <Clock className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--tag-body)', opacity: 0.3 }} />
-          <p className="text-sm" style={{ color: 'var(--tag-body)' }}>
-            No recent activity
-          </p>
+      {visible.length === 0 ? (
+        <div className="p-5">
+          <EmptyState
+            icon={<Inbox className="w-5 h-5" />}
+            title="Nothing recent yet"
+            description="Activity will appear here as you use the system."
+            compact
+          />
         </div>
       ) : (
-        <div className="space-y-4">
-          {activities.slice(0, 8).map((activity, index) => {
+        <ol className="relative">
+          {visible.map((activity, index) => {
             const Icon = activity.icon;
+            const isLast = index === visible.length - 1;
             return (
-              <div
+              <li
                 key={index}
-                className="flex items-start gap-3 pb-4 border-b last:border-b-0"
-                style={{ borderColor: 'var(--tag-border)' }}
+                className={cn(
+                  "relative flex items-start gap-3 px-5 py-3",
+                  !isLast && "border-b border-line-subtle",
+                )}
               >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'var(--tag-bg-warm)' }}
+                {/* Vertical connector */}
+                {!isLast && (
+                  <span
+                    aria-hidden
+                    className="absolute left-[32px] top-11 bottom-0 w-px bg-line-subtle"
+                  />
+                )}
+                <span
+                  className={cn(
+                    "relative z-10 inline-flex items-center justify-center w-7 h-7 rounded-sm shrink-0",
+                    "bg-surface-sunken border border-line-subtle text-ink-tertiary",
+                  )}
                 >
-                  <Icon className="w-4 h-4" style={{ color: 'var(--tag-orange)' }} />
-                </div>
+                  <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-normal">{activity.title}</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--tag-body)' }}>
-                    {formatDate(activity.date)}
+                  <p className="text-[13px] text-ink-primary leading-tight">{activity.title}</p>
+                  <p className="text-[11px] text-ink-tertiary font-mono tabular-nums mt-0.5">
+                    {formatRelative(activity.date)}
                   </p>
                 </div>
-                <span
-                  className={`badge ${
-                    activity.status === "approved" || activity.status === "complete" || activity.status === "acknowledged"
-                      ? "badge-success"
-                      : activity.status === "pending"
-                      ? "badge-warning"
-                      : activity.status === "rejected"
-                      ? "badge-danger"
-                      : "badge-neutral"
-                  }`}
-                >
-                  {activity.status}
-                </span>
-              </div>
+                <Badge variant={statusVariant[activity.status]} size="sm" dot>
+                  {statusLabel[activity.status]}
+                </Badge>
+              </li>
             );
           })}
-        </div>
+        </ol>
       )}
     </div>
   );

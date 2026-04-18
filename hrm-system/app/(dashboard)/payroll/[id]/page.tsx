@@ -64,17 +64,17 @@ export default async function SalarySlipViewPage({ params }: PageProps) {
         <Link
           href="/payroll"
           className="inline-flex items-center gap-2 text-sm mb-4 hover:underline"
-          style={{ color: "var(--tag-orange)" }}
+          style={{ color: "var(--accent)" }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Payroll
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 style={{ fontSize: "2rem", lineHeight: "1.1", letterSpacing: "-0.64px" }}>
+            <h1 className="text-[2rem] leading-[1.1] tracking-[-0.025em] font-light text-ink-primary">
               {monthName} {slip.year}
             </h1>
-            <p className="text-sm mt-2" style={{ color: "var(--tag-body)" }}>
+            <p className="text-sm mt-2" style={{ color: "var(--text-tertiary)" }}>
               Uploaded {formatDate(slip.uploaded_at)}
             </p>
           </div>
